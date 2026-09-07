@@ -35,6 +35,18 @@ if (process.env.RAILWAY_PUBLIC_DOMAIN) {
   allowedOrigins.push(`https://www.${process.env.RAILWAY_PUBLIC_DOMAIN}`);
 }
 
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    try {
+      if (new URL(origin).host === req.get('host') && !allowedOrigins.includes(origin)) {
+        allowedOrigins.push(origin);
+      }
+    } catch (e) { /* ignore malformed origin */ }
+  }
+  next();
+});
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
