@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - SaveGoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="nav" id="mainNav"></nav>
+
+  <div class="page-content">
+    <div class="container">
+      <div class="dashboard-header">
+        <h1>Admin Panel</h1>
+        <p>Manage users and monitor platform activity</p>
+      </div>
+
+      <div class="stats-grid" id="adminStatsGrid">
+        <div class="stat-card primary">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="statUsers">-</div>
+          <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card secondary">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-value" id="statGoals">-</div>
+          <div class="stat-label">Total Goals</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="statCompleted">-</div>
+          <div class="stat-label">Completed Goals</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">💸</div>
+          <div class="stat-value" id="statTransactions">-</div>
+          <div class="stat-label">Transactions</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h2 class="section-title">All Users</h2>
+      </div>
+
+      <div id="adminUsersContainer">
+        <div class="loading-overlay">
+          <div class="spinner spinner-lg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

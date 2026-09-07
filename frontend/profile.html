@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - SaveGoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="nav" id="mainNav"></nav>
+
+  <div class="page-content">
+    <div class="container" style="max-width:700px;">
+      <div class="dashboard-header">
+        <h1>Profile & Settings</h1>
+        <p>Manage your account settings</p>
+      </div>
+
+      <!-- Profile Info -->
+      <div class="card profile-section">
+        <h3>Personal Information</h3>
+        <form id="profileForm">
+          <div class="form-group">
+            <label class="form-label" for="profileName">Full Name</label>
+            <input type="text" id="profileName" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="profileEmail">Email</label>
+            <input type="email" id="profileEmail" class="form-input" disabled>
+            <div class="form-hint">Email cannot be changed</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="profilePhone">Phone Number</label>
+            <input type="tel" id="profilePhone" class="form-input" required>
+          </div>
+          <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+        </form>
+      </div>
+
+      <!-- Change Password -->
+      <div class="card profile-section">
+        <h3>Change Password</h3>
+        <form id="passwordForm">
+          <div class="form-group">
+            <label class="form-label" for="currentPassword">Current Password</label>
+            <input type="password" id="currentPassword" class="form-input" required autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newPassword">New Password</label>
+            <input type="password" id="newPassword" class="form-input" placeholder="At least 6 characters" required autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirmNewPassword">Confirm New Password</label>
+            <input type="password" id="confirmNewPassword" class="form-input" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
+        </form>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="card profile-section" style="border-color:rgba(239,68,68,0.3);">
+        <h3 style="color:var(--danger);">Danger Zone</h3>
+        <p style="margin-bottom:16px;">Once you delete your account, there is no going back. All your goals and data will be permanently removed.</p>
+        <button class="btn btn-danger" onclick="openModal('deleteAccountModal')">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Account Modal -->
+  <div class="modal-overlay" id="deleteAccountModal">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 style="color:var(--danger);">Delete Account</h3>
+        <button class="modal-close" onclick="closeModal('deleteAccountModal')">✕</button>
+      </div>
+      <p style="margin-bottom:16px;">This will permanently delete your account, all goals, and all transaction history. This cannot be undone.</p>
+      <div class="form-group">
+        <label class="form-label" for="deleteConfirmEmail">Type your email to confirm</label>
+        <input type="email" id="deleteConfirmEmail" class="form-input" placeholder="your@email.com">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('deleteAccountModal')">Cancel</button>
+        <button class="btn btn-danger" id="deleteAccountBtn" onclick="handleDeleteAccount()" disabled>Delete My Account</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - SaveGoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="nav" id="mainNav"></nav>
+
+  <div class="page-content">
+    <div class="container">
+      <!-- Dashboard Header -->
+      <div class="dashboard-header">
+        <h1 id="greeting">Loading...</h1>
+        <p>Here's an overview of your savings progress</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card primary">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="statTotalSaved">-</div>
+          <div class="stat-label">Total Saved</div>
+        </div>
+        <div class="stat-card secondary">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-value" id="statActiveGoals">-</div>
+          <div class="stat-label">Active Goals</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="statCompletedGoals">-</div>
+          <div class="stat-label">Completed Goals</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="statOverall">-</div>
+          <div class="stat-label">Overall Progress</div>
+        </div>
+      </div>
+
+      <!-- Overall Progress -->
+      <div class="card" style="margin-bottom:32px;" id="overallProgressCard">
+        <div class="progress-label">
+          <span style="font-weight:600;">Overall Savings Progress</span>
+          <span id="overallPercentage" style="font-weight:700;color:var(--primary);">0%</span>
+        </div>
+        <div class="progress-bar progress-bar-lg">
+          <div class="progress-fill" id="overallBar" style="width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:var(--text-muted);">
+          <span id="overallSavedLabel">NPR 0 saved</span>
+          <span id="overallTargetLabel">Target: NPR 0</span>
+        </div>
+      </div>
+
+      <!-- Goals Section -->
+      <div class="section-header">
+        <h2 class="section-title">Savings Goals</h2>
+        <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
+      </div>
+
+      <div id="goalsContainer">
+        <div class="loading-overlay">
+          <div class="spinner spinner-lg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Goal Modal -->
+  <div class="modal-overlay" id="createGoalModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create Savings Goal</h3>
+        <button class="modal-close" onclick="closeModal('createGoalModal')">✕</button>
+      </div>
+      <form id="createGoalForm">
+        <div class="form-group">
+          <label class="form-label" for="goalName">Goal Name</label>
+          <input type="text" id="goalName" class="form-input" placeholder="e.g. New Laptop" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goalTarget">Target Amount (NPR)</label>
+          <input type="number" id="goalTarget" class="form-input" placeholder="e.g. 100000" min="1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goalStarting">Starting Amount (NPR)</label>
+          <input type="number" id="goalStarting" class="form-input" placeholder="e.g. 10000" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goalDate">Target Date</label>
+          <input type="date" id="goalDate" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goalCategory">Category</label>
+          <select id="goalCategory" class="form-select" required>
+            <option value="">Select category</option>
+            <option value="Emergency Fund">Emergency Fund</option>
+            <option value="Education">Education</option>
+            <option value="Travel">Travel</option>
+            <option value="Phone">Phone</option>
+            <option value="Laptop">Laptop</option>
+            <option value="Car">Car</option>
+            <option value="House">House</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goalDescription">Description (optional)</label>
+          <textarea id="goalDescription" class="form-textarea" placeholder="What are you saving for?" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createGoalModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="createGoalBtn">Create Goal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
