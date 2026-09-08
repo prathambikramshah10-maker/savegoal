@@ -42,6 +42,13 @@ function initLoginForm(form) {
 
     try {
       const data = await api.post('/auth/login', { email, password });
+      if (data.token && data.user) {
+        setAuth(data.token, data.user);
+        showToast('Welcome back, ' + data.user.name + '!', 'success');
+        const role = data.user.role || 'user';
+        window.location.href = role === 'admin' ? 'admin.html' : 'dashboard.html';
+        return;
+      }
       pendingLogin = { email, devCode: data.devCode };
       form.querySelector('#loginCredentials').style.display = 'none';
       form.querySelector('#loginOtp').style.display = 'block';
@@ -148,6 +155,13 @@ function initRegisterForm(form) {
 
     try {
       const data = await api.post('/auth/register', { name, email, phone, password });
+      if (data.token && data.user) {
+        setAuth(data.token, data.user);
+        showToast('Account created! Welcome to SaveGoal!', 'success');
+        const role = data.user.role || 'user';
+        window.location.href = role === 'admin' ? 'admin.html' : 'dashboard.html';
+        return;
+      }
       pendingRegister = { name, email, phone, password, devCode: data.devCode };
       form.querySelector('#registerDetails').style.display = 'none';
       form.querySelector('#registerOtp').style.display = 'block';

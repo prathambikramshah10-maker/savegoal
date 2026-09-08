@@ -36,14 +36,31 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    const otpCode = await createAndSendOtp(email.toLowerCase(), 'register');
+    if (process.env.OTP_REQUIRED === 'true') {
+      const otpCode = await createAndSendOtp(email.toLowerCase(), 'register');
 
-    res.status(200).json({
-      message: 'Verification code sent to your email. Please enter it to complete registration.',
-      email: email.toLowerCase(),
-      verify: true,
-      emailConfigured: isConfigured(),
-      devCode: isConfigured() ? undefined : otpCode
+      return res.status(200).json({
+        message: 'Verification code sent to your email. Please enter it to complete registration.',
+        email: email.toLowerCase(),
+        verify: true,
+        emailConfigured: isConfigured(),
+        devCode: isConfigured() ? undefined : otpCode
+      });
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      passwordHash: password
+    });
+
+    const token = generateToken(user._id, user.role);
+
+    res.status(201).json({
+      message: 'Account created successfully',
+      token,
+      user: publicUser(user)
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -112,14 +129,25 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const otpCode = await createAndSendOtp(email.toLowerCase(), 'login');
+    if (process.env.OTP_REQUIRED === 'true') {
+      const otpCode = await createAndSendOtp(email.toLowerCase(), 'login');
+
+      return res.json({
+        message: 'Verification code sent to your email. Please enter it to continue.',
+        email: email.toLowerCase(),
+        verify: true,
+        emailConfigured: isConfigured(),
+        devCode: isConfigured() ? undefined : otpCode
+      });
+    }
+
+    const token = generateToken(user._id, user.role);
 
     res.json({
-      message: 'Verification code sent to your email. Please enter it to continue.',
-      email: email.toLowerCase(),
-      verify: true,
-      emailConfigured: isConfigured(),
-      devCode: isConfigured() ? undefined : otpCode
+      message: 'Login successful',
+      token,
+      user: publicUser(user),
+      role: user.role
     });
   } catch (err) {
     res.status(500).json({ error: 'Server error during login' });
