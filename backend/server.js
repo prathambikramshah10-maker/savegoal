@@ -25,10 +25,17 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login/registration attempts. Please try again later.' }
 });
 
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:5500,http://127.0.0.1:3000,http://127.0.0.1:5500')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+
+if (process.env.RENDER_EXTERNAL_URL) {
+  try {
+    const renderUrl = new URL(process.env.RENDER_EXTERNAL_URL);
+    allowedOrigins.push(renderUrl.origin);
+  } catch (e) { /* ignore */ }
+}
 
 if (process.env.RAILWAY_PUBLIC_DOMAIN) {
   allowedOrigins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
@@ -39,7 +46,11 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) {
     try {
-      if (new URL(origin).host === req.get('host') && !allowedOrigins.includes(origin)) {
+      const originHost = new URL(origin).host;
+      const reqHost = req.hostname || req.get('x-forwarded-host') || req.get('host');
+      const originNoPort = new URL(origin).hostname;
+      const reqNoPort = (req.hostname || '').split(':')[0];
+      if ((originHost === reqHost || originNoPort === reqNoPort) && !allowedOrigins.includes(origin)) {
         allowedOrigins.push(origin);
       }
     } catch (e) { /* ignore malformed origin */ }
@@ -51,7 +62,7 @@ app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    if (process.env.NODE_ENV === 'development' && origin === 'null') return cb(null, true);
+    if (process.env.NODE_ENV === 'development') return cb(null, true);
     return cb(new Error('CORS origin not allowed'));
   },
   credentials: true
@@ -73,7 +84,7 @@ app.get('/api/health', (req, res) => {
 const frontendDir = path.resolve(__dirname, '..', 'frontend');
 app.use(express.static(frontendDir));
 
-app.get('/api/*', (req, res) => {
+app.all('/api/*', (req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 

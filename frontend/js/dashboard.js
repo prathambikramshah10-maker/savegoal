@@ -22,17 +22,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
   try {
-    const [statsRes, goalsRes] = await Promise.all([
+    const [statsRes, goalsRes, streakRes] = await Promise.all([
       api.get('/goals/stats'),
-      api.get('/goals')
+      api.get('/goals'),
+      api.get('/goals/streak')
     ]);
 
     updateStats(statsRes.stats, statsRes.recentTransactions);
     currentGoals = goalsRes.goals;
     renderGoals(currentGoals);
+    renderStreak(streakRes);
+    checkProgressMilestones(currentGoals);
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function renderStreak(streak) {
+  const container = document.getElementById('streakContainer');
+  if (!container) return;
+  if (streak.streak === 0) {
+    container.innerHTML = `
+      <div class="streak-display">
+        <div class="streak-number">0</div>
+        <div class="streak-label">
+          <strong>Start your streak!</strong><br>
+          Save at least once today to begin.
+        </div>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="streak-display">
+        <div class="streak-number">${streak.streak}</div>
+        <div class="streak-label">
+          <strong>${streak.streak === 1 ? 'day' : 'days'} streak</strong><br>
+          Longest: ${streak.longestStreak} ${streak.longestStreak === 1 ? 'day' : 'days'}
+        </div>
+      </div>
+    `;
+  }
+}
+
+const MILESTONE_KEY = 'savegoal_milestones_seen';
+
+function checkProgressMilestones(goals) {
+  try {
+    const seen = JSON.parse(localStorage.getItem(MILESTONE_KEY) || '{}');
+    goals.forEach(g => {
+      if (g.status !== 'active' || g.targetAmount <= 0) return;
+      const pct = Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100));
+      const key = `${g._id}`;
+      const prev = seen[key] || 0;
+      [50, 75, 100].forEach(milestone => {
+        if (pct >= milestone && prev < milestone) {
+          if (milestone === 100) {
+            showToast(`"${g.name}" is 100% complete! Congratulations!`, 'success');
+          } else {
+            showToast(`"${g.name}" reached ${milestone}% of its goal!`, 'info');
+          }
+        }
+      });
+      seen[key] = pct;
+    });
+    localStorage.setItem(MILESTONE_KEY, JSON.stringify(seen));
+  } catch (e) { /* ignore */ }
 }
 
 function updateStats(stats, recentTransactions) {
@@ -85,9 +139,12 @@ function renderGoals(goals) {
 
 function renderGoalCard(goal) {
   const isCompleted = goal.status === 'completed';
+  const isLocked = goal.isLocked === true;
   const percentage = goal.targetAmount > 0
     ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100))
     : 0;
+
+  const budget = !isCompleted ? calculateBudget(goal.targetAmount, goal.currentAmount, goal.targetDate) : null;
 
   return `
     <div class="goal-card" onclick="window.location.href='goal.html?id=${goal._id}'">
@@ -107,8 +164,54 @@ function renderGoalCard(goal) {
         <span class="goal-card-date">${isCompleted ? 'Completed' : daysUntil(goal.targetDate)}</span>
         <span class="goal-card-percentage">${percentage}%</span>
       </div>
+      ${!isCompleted && !isLocked && budget ? `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-light);">
+        <span style="font-size:0.75rem;color:var(--text-muted);">Save ~${formatNPR(budget.monthly)}/mo</span>
+        <button class="goal-card-quick-deposit" onclick="event.stopPropagation();openQuickDeposit('${goal._id}','${escapeHtml(goal.name).replace(/'/g,"\\'")}',${goal.currentAmount},${goal.targetAmount})">+ Deposit</button>
+      </div>
+      ` : ''}
     </div>
   `;
+}
+
+let quickDepositGoalId = null;
+
+function openQuickDeposit(goalId, goalName, currentAmount, targetAmount) {
+  quickDepositGoalId = goalId;
+  const remaining = targetAmount - currentAmount;
+  document.getElementById('quickDepositGoalName').textContent = goalName;
+  document.getElementById('quickDepositRemaining').textContent = `Remaining: ${formatNPR(remaining)}`;
+  document.getElementById('quickDepositAmount').value = '';
+  document.getElementById('quickDepositAmount').max = remaining;
+  document.getElementById('quickDepositAmount').placeholder = `Max: ${formatNPR(remaining)}`;
+  document.getElementById('quickDepositNote').value = '';
+  openModal('quickDepositModal');
+}
+
+async function submitQuickDeposit() {
+  const amount = parseFloat(document.getElementById('quickDepositAmount').value);
+  const note = document.getElementById('quickDepositNote').value.trim();
+  const btn = document.getElementById('quickDepositBtn');
+
+  if (!amount || amount <= 0) {
+    showToast('Please enter a valid amount', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+
+  try {
+    await api.post(`/goals/${quickDepositGoalId}/savings`, { amount, note: note || 'Quick deposit' });
+    showToast('Savings added successfully!', 'success');
+    closeModal('quickDepositModal');
+    loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Deposit';
+  }
 }
 
 function initCreateGoalForm() {

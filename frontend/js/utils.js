@@ -7,7 +7,8 @@ const API_BASE = (() => {
     const { protocol, hostname, port } = window.location;
     if (protocol === 'file:') return 'http://localhost:5000/api';
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return port === '3000' ? 'http://localhost:5000/api' : '/api';
+      if (port === '5000') return '/api';
+      return 'http://localhost:5000/api';
     }
     return '/api';
   } catch (e) {
@@ -27,7 +28,16 @@ const api = {
 
     try {
       const res = await fetch(`${API_BASE}${path}`, config);
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        if (!res.ok) {
+          throw new Error('Server error. Please try again later.');
+        }
+        throw new Error('Invalid response from server.');
+      }
 
       if (!res.ok) {
         if (res.status === 401) {
@@ -359,6 +369,41 @@ function celebrate() {
       confetti.remove();
     }
   });
+}
+
+/* --- Export CSV --- */
+function exportCSV(goalId, goalName) {
+  const url = `${API_BASE}/goals/${goalId}/export`;
+  const token = getToken();
+  fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+    .then(res => {
+      if (!res.ok) throw new Error('Export failed');
+      return res.blob();
+    })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${goalName.replace(/[^a-z0-9]/gi, '_')}_transactions.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('CSV exported successfully', 'success');
+    })
+    .catch(err => showToast(err.message, 'error'));
+}
+
+/* --- Budget Calculator --- */
+function calculateBudget(targetAmount, currentAmount, targetDate) {
+  const remaining = Math.max(0, targetAmount - currentAmount);
+  const now = new Date();
+  const target = new Date(targetDate);
+  const diffMs = target - now;
+  const monthsLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 30.44)));
+  const weeksLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 7)));
+  const daysLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  const daily = remaining / daysLeft;
+  const weekly = remaining / weeksLeft;
+  const monthly = remaining / monthsLeft;
+  return { remaining, monthsLeft, weekly: Math.round(weekly), monthly: Math.round(monthly), daily: Math.round(daily) };
 }
 
 /* --- Init --- */

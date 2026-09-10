@@ -43,6 +43,18 @@
         </div>
       </div>
 
+      <!-- Savings Streak -->
+      <div class="card" style="margin-bottom:32px;" id="streakCard">
+        <div class="section-header" style="margin-bottom:16px;">
+          <h2 class="section-title" style="font-size:1.1rem;">🔥 Savings Streak</h2>
+        </div>
+        <div id="streakContainer">
+          <div class="loading-overlay" style="padding:20px;">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Overall Progress -->
       <div class="card" style="margin-bottom:32px;" id="overallProgressCard">
         <div class="progress-label">
@@ -119,6 +131,53 @@
           <button type="submit" class="btn btn-primary" id="createGoalBtn">Create Goal</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="bottom-nav-item active">
+      <span class="bottom-nav-icon">🏠</span>
+      <span>Home</span>
+    </a>
+    <a href="dashboard.html" class="bottom-nav-item" onclick="event.preventDefault();document.getElementById('goalsContainer').scrollIntoView({behavior:'smooth'});">
+      <span class="bottom-nav-icon">📊</span>
+      <span>Goals</span>
+    </a>
+    <button class="bottom-nav-add" onclick="openCreateGoalModal()" title="New Goal">+</button>
+    <a href="#" class="bottom-nav-item" onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'});">
+      <span class="bottom-nav-icon">📈</span>
+      <span>Stats</span>
+    </a>
+    <a href="profile.html" class="bottom-nav-item">
+      <span class="bottom-nav-icon">👤</span>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <!-- Quick Deposit Modal -->
+  <div class="modal-overlay" id="quickDepositModal">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <h3>Quick Deposit</h3>
+        <button class="modal-close" onclick="closeModal('quickDepositModal')">✕</button>
+      </div>
+      <div style="padding:14px 16px;background:var(--primary-bg);border-radius:var(--radius);margin-bottom:16px;">
+        <div style="font-weight:600;font-size:0.95rem;margin-bottom:4px;" id="quickDepositGoalName"></div>
+        <div style="font-size:0.85rem;color:var(--text-muted);" id="quickDepositRemaining"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="quickDepositAmount">Amount (NPR)</label>
+        <input type="number" id="quickDepositAmount" class="form-input" placeholder="e.g. 5000" min="1" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="quickDepositNote">Note (optional)</label>
+        <input type="text" id="quickDepositNote" class="form-input" placeholder="e.g. Monthly savings">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('quickDepositModal')">Cancel</button>
+        <button class="btn btn-primary" id="quickDepositBtn" onclick="submitQuickDeposit()">Deposit</button>
+      </div>
     </div>
   </div>
 

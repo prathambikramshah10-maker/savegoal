@@ -172,11 +172,33 @@ router.get('/:id/transactions', async (req, res) => {
       return res.status(404).json({ error: 'Goal not found' });
     }
 
-    const transactions = await SavingsTransaction.find({
-      goalId: req.params.id,
-      userId: req.userId
-    })
-      .sort({ date: -1 })
+    const query = { goalId: req.params.id, userId: req.userId };
+    const { type, status, dateFrom, dateTo, search, sortBy, sortDir } = req.query;
+
+    if (type && ['deposit', 'withdrawal'].includes(type)) {
+      query.type = type;
+    }
+    if (status && ['pending', 'confirmed', 'cancelled'].includes(status)) {
+      query.status = status;
+    }
+    if (dateFrom || dateTo) {
+      query.date = {};
+      if (dateFrom) query.date.$gte = new Date(dateFrom);
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        query.date.$lte = end;
+      }
+    }
+    if (search) {
+      query.note = { $regex: search, $options: 'i' };
+    }
+
+    const sortField = sortBy === 'amount' ? 'amount' : 'date';
+    const sortOrder = sortDir === 'asc' ? 1 : -1;
+
+    const transactions = await SavingsTransaction.find(query)
+      .sort({ [sortField]: sortOrder })
       .lean();
 
     res.json({ transactions });

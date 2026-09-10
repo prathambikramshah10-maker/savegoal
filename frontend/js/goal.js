@@ -31,6 +31,7 @@ async function loadGoal(goalId) {
     ]);
 
     currentGoal = goalRes.goal;
+    allTransactions = transactionsRes.transactions;
     renderGoalDetail(currentGoal);
     renderTransactions(transactionsRes.transactions);
   } catch (err) {
@@ -110,8 +111,26 @@ function renderGoalDetail(goal) {
       ${goal.description ? `<p style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-light);font-size:0.95rem;">${escapeHtml(goal.description)}</p>` : ''}
     </div>
 
+    ${!isCompleted && !isLocked ? `
+    <div class="budget-card">
+      <h4>💡 Savings Budget</h4>
+      ${(() => {
+        const b = calculateBudget(goal.targetAmount, goal.currentAmount, goal.targetDate);
+        return `
+        <div class="budget-amount">${formatNPR(b.monthly)}<span style="font-size:0.9rem;font-weight:500;color:var(--text-muted);">/month</span></div>
+        <div class="budget-detail">
+          To reach your target, save approximately:<br>
+          <strong>${formatNPR(b.daily)}</strong> daily · <strong>${formatNPR(b.weekly)}</strong> weekly · <strong>${formatNPR(b.monthly)}</strong> monthly<br>
+          You have <strong>${b.monthsLeft}</strong> ${b.monthsLeft === 1 ? 'month' : 'months'} (${daysUntil(goal.targetDate)}) left.
+        </div>
+        `;
+      })()}
+    </div>
+    ` : ''}
+
     <div class="section-header">
       <h2 class="section-title">Savings History</h2>
+      <button class="btn-export" onclick="exportCSV('${goal._id}','${escapeHtml(goal.name).replace(/'/g,"\\'")}')">📥 Export CSV</button>
     </div>
 
     <div id="transactionsContainer"></div>
@@ -137,10 +156,67 @@ function renderTransactions(transactions) {
   }
 
   container.innerHTML = `
-    <div class="transaction-list">
+    <div class="filter-bar" id="transactionFilterBar">
+      <select class="form-select" id="filterType" onchange="applyTransactionFilters()">
+        <option value="">All Types</option>
+        <option value="deposit">Deposits</option>
+        <option value="withdrawal">Withdrawals</option>
+      </select>
+      <select class="form-select" id="filterStatus" onchange="applyTransactionFilters()">
+        <option value="">All Status</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="pending">Pending</option>
+      </select>
+      <input type="date" class="form-input" id="filterDateFrom" onchange="applyTransactionFilters()" title="From date">
+      <input type="date" class="form-input" id="filterDateTo" onchange="applyTransactionFilters()" title="To date">
+      <input type="text" class="form-input" id="filterSearch" placeholder="Search notes..." oninput="applyTransactionFilters()" style="max-width:160px;">
+      <button class="btn btn-sm btn-secondary" onclick="clearTransactionFilters()">Clear</button>
+    </div>
+    <div class="transaction-list" id="transactionList">
       ${transactions.map(t => renderTransactionItem(t)).join('')}
     </div>
   `;
+}
+
+let allTransactions = [];
+
+function setAllTransactions(transactions) {
+  allTransactions = transactions;
+}
+
+function applyTransactionFilters() {
+  const type = document.getElementById('filterType')?.value || '';
+  const status = document.getElementById('filterStatus')?.value || '';
+  const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+  const dateTo = document.getElementById('filterDateTo')?.value || '';
+  const search = (document.getElementById('filterSearch')?.value || '').toLowerCase();
+
+  let filtered = allTransactions.filter(t => {
+    if (type && t.type !== type) return false;
+    if (status && t.status !== status) return false;
+    if (dateFrom && new Date(t.date) < new Date(dateFrom)) return false;
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      if (new Date(t.date) > end) return false;
+    }
+    if (search && !(t.note || '').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const list = document.getElementById('transactionList');
+  if (list) {
+    list.innerHTML = filtered.map(t => renderTransactionItem(t)).join('');
+  }
+}
+
+function clearTransactionFilters() {
+  document.getElementById('filterType').value = '';
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterDateFrom').value = '';
+  document.getElementById('filterDateTo').value = '';
+  document.getElementById('filterSearch').value = '';
+  applyTransactionFilters();
 }
 
 function renderTransactionItem(t) {
