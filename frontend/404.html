@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found - SaveGoal</title>
+  <meta name="description" content="The page you are looking for does not exist.">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    .error-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .error-code {
+      font-size: 8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--champagne), var(--champagne-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .error-page h2 {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+    }
+    .error-page p {
+      font-size: 1.05rem;
+      max-width: 440px;
+      margin: 0 auto 32px;
+    }
+    .error-links {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="error-page">
+    <div>
+      <div class="error-code">404</div>
+      <h2>Page not found</h2>
+      <p>The page you're looking for doesn't exist or has been moved. Let's get you back on track.</p>
+      <div class="error-links">
+        <a href="index.html" class="btn btn-primary btn-lg">Go Home</a>
+        <a href="dashboard.html" class="btn btn-secondary btn-lg">Dashboard</a>
+      </div>
+    </div>
+  </div>
+  <script src="js/utils.js"></script>
+</body>
+</html>

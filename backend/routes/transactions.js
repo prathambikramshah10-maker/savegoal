@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { savingsSchema } = require('../middleware/validation');
 const { createAndSendOtp, verifyOtp } = require('../utils/otp');
 const { updateGoalFromTransactions } = require('../utils/goalHelper');
+const { checkAndNotifyMilestones } = require('./goals');
 
 const router = express.Router();
 
@@ -89,6 +90,7 @@ router.post('/:id/savings/:transactionId/confirm', async (req, res) => {
     transaction.status = 'confirmed';
     await transaction.save();
     await updateGoalFromTransactions(req.params.id, req.userId);
+    checkAndNotifyMilestones(req.params.id, req.userId);
 
     const goal = await SavingsGoal.findById(req.params.id);
     res.json({

@@ -4,6 +4,58 @@ const SavingsTransaction = require('../models/SavingsTransaction');
 const auth = require('../middleware/auth');
 const { goalSchema } = require('../middleware/validation');
 const { updateGoalFromTransactions } = require('../utils/goalHelper');
+const nodemailer = require('nodemailer');
+
+async function sendMilestoneEmail(userEmail, userName, goalName, percentage) {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    const subject = percentage === 100
+      ? `🎉 Congratulations! You completed "${goalName}"!`
+      : `🎯 "${goalName}" reached ${percentage}%!`;
+    const body = percentage === 100
+      ? `<h2>Congratulations, ${userName}! 🎉</h2><p>You've reached <strong>100%</strong> of your savings goal <strong>"${goalName}"</strong>!</p><p>This is a huge achievement. Keep up the great work!</p><p style="margin-top:24px;"><a href="https://savegoal-br74.onrender.com/dashboard.html" style="background:#D4AF6A;color:#0B0D0F;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View Dashboard</a></p>`
+      : `<h2>Great progress, ${userName}! 🎯</h2><p>Your savings goal <strong>"${goalName}"</strong> has reached <strong>${percentage}%</strong>!</p><p>Keep saving — you're getting closer to your target!</p><p style="margin-top:24px;"><a href="https://savegoal-br74.onrender.com/dashboard.html" style="background:#D4AF6A;color:#0B0D0F;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View Goal</a></p>`;
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER || 'noreply@savegoal.com',
+      to: userEmail,
+      subject,
+      html: body
+    });
+  } catch (e) {
+    console.log('Milestone email failed:', e.message);
+  }
+}
+
+async function checkAndNotifyMilestones(goalId, userId) {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(userId);
+    if (!user || !user.email) return;
+
+    const goal = await SavingsGoal.findById(goalId).lean();
+    if (!goal || goal.targetAmount <= 0) return;
+
+    const pct = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
+
+    const MILESTONE_KEY = `milestone_${userId}_${goalId}`;
+    const Goal = SavingsGoal;
+    if (!Goal[MILESTONE_KEY]) Goal[MILESTONE_KEY] = {};
+    const seen = Goal[MILESTONE_KEY];
+
+    [50, 75, 100].forEach(m => {
+      if (pct >= m && !seen[m]) {
+        seen[m] = true;
+        sendMilestoneEmail(user.email, user.name, goal.name, m);
+      }
+    });
+  } catch (e) { /* ignore */ }
+}
 
 const router = express.Router();
 
@@ -276,3 +328,4 @@ router.get('/:id/export', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.checkAndNotifyMilestones = checkAndNotifyMilestones;

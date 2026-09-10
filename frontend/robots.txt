@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin.html
+Disallow: /dashboard.html
+Disallow: /goal.html
+Disallow: /profile.html
+
+Sitemap: https://savegoal-br74.onrender.com/sitemap.xml

@@ -1,0 +1,19 @@
+{
+  "name": "SaveGoal - Your Savings, Your Future",
+  "short_name": "SaveGoal",
+  "description": "Set goals, track progress, and watch your savings grow. A smart savings tracker for Nepal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0D0F",
+  "theme_color": "#D4AF6A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"]
+}

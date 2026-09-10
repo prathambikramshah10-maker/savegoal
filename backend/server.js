@@ -89,7 +89,7 @@ app.all('/api/*', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendDir, 'index.html'));
+  res.sendFile(path.join(frontendDir, '404.html'));
 });
 
 app.use((err, req, res, next) => {
