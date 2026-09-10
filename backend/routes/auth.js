@@ -8,6 +8,36 @@ const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
+const failedLogins = new Map();
+
+function recordFailedLogin(email) {
+  const key = email.toLowerCase();
+  const entry = failedLogins.get(key) || { count: 0, lockedUntil: 0 };
+  if (Date.now() > entry.lockedUntil) {
+    entry.count = 0;
+    entry.lockedUntil = 0;
+  }
+  entry.count += 1;
+  if (entry.count >= 5) {
+    entry.lockedUntil = Date.now() + 15 * 60 * 1000;
+    entry.count = 0;
+  }
+  failedLogins.set(key, entry);
+}
+
+function isLocked(email) {
+  const entry = failedLogins.get(email.toLowerCase());
+  if (!entry) return { locked: false };
+  if (Date.now() < entry.lockedUntil) {
+    const mins = Math.ceil((entry.lockedUntil - Date.now()) / 60000);
+    return { locked: true, mins };
+  }
+  if (entry.lockedUntil > 0 && Date.now() >= entry.lockedUntil) {
+    failedLogins.delete(email.toLowerCase());
+  }
+  return { locked: false };
+}
+
 const generateToken = (userId, role = 'user') => {
   return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
@@ -67,13 +97,20 @@ router.post('/login', async (req, res) => {
 
     const { email, password } = req.body;
 
+    const lock = isLocked(email);
+    if (lock.locked) {
+      return res.status(423).json({ error: `Too many failed attempts. Account locked. Try again in ${lock.mins} minutes.` });
+    }
+
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
+      recordFailedLogin(email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      recordFailedLogin(email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 

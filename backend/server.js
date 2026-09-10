@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
 
 const authRoutes = require('./routes/auth');
 const goalRoutes = require('./routes/goals');
@@ -12,6 +14,17 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Enforce HTTPS in production (Render/Heroku terminate TLS at proxy)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    const forwarded = req.get('x-forwarded-proto');
+    if (forwarded && forwarded !== 'https') {
+      return res.redirect(301, `https://${req.get('host')}${req.originalUrl}`);
+    }
+    next();
+  });
+}
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -69,6 +82,10 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10kb' }));
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+app.use(mongoSanitize());
 app.use('/api', globalLimiter);
 app.use('/api/auth', authLimiter);
 
