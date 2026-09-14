@@ -138,15 +138,15 @@ function daysUntil(dateStr) {
 }
 
 /* --- Category Helpers --- */
-const categoryIcons = {
-  'Emergency Fund': '🛡️',
-  'Education': '📚',
-  'Travel': '✈️',
-  'Phone': '📱',
-  'Laptop': '💻',
-  'Car': '🚗',
-  'House': '🏠',
-  'Other': '🎯'
+const categoryImages = {
+  'Emergency Fund': 'category-emergency.svg',
+  'Education': 'category-education.svg',
+  'Travel': 'category-travel.svg',
+  'Phone': 'category-phone.svg',
+  'Laptop': 'category-laptop.svg',
+  'Car': 'category-car.svg',
+  'House': 'category-house.svg',
+  'Other': 'category-other.svg'
 };
 
 const categoryClasses = {
@@ -161,7 +161,9 @@ const categoryClasses = {
 };
 
 function getCategoryIcon(category) {
-  return categoryIcons[category] || '🎯';
+  const file = categoryImages[category] || 'category-other.svg';
+  const alt = String(category).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<img src="images/${file}" alt="${alt}" class="category-img">`;
 }
 
 function getCategoryClass(category) {
@@ -225,8 +227,8 @@ function renderNav() {
           SaveGoal
         </a>
         <div class="nav-links">
-          <a href="login.html" class="btn btn-ghost">Login</a>
-          <a href="register.html" class="btn btn-primary">Start Saving</a>
+          <a href="login.html" class="btn btn-primary">Login</a>
+          <a href="register.html" class="btn btn-primary">Sign Up</a>
         </div>
         <button class="nav-toggle" onclick="toggleMobileNav()">
           <span></span><span></span><span></span>

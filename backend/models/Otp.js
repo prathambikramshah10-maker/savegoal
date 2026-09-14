@@ -9,13 +9,13 @@ const otpSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
-    code: {
+    codeHash: {
       type: String,
       required: true
     },
     purpose: {
       type: String,
-      enum: ['login', 'register', 'withdrawal', 'admin'],
+      enum: ['login', 'register', 'deposit', 'withdrawal', 'admin', 'reset'],
       default: 'login'
     },
     expiresAt: {
@@ -29,6 +29,10 @@ const otpSchema = new mongoose.Schema(
     attempts: {
       type: Number,
       default: 0
+    },
+    lastSentAt: {
+      type: Date,
+      default: Date.now
     }
   },
   { timestamps: true }

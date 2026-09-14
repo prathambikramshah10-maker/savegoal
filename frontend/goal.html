@@ -54,8 +54,12 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="savingsConfirmCode">Confirmation Code (OTP)</label>
-          <input type="text" id="savingsConfirmCode" class="form-input" placeholder="Enter the code sent to your email" inputmode="numeric" maxlength="6">
-          <div class="form-hint">A one-time code will be sent to your email to approve this deposit.</div>
+          <div style="display:flex;gap:10px;">
+            <input type="text" id="savingsConfirmCode" class="form-input" placeholder="6-digit code" inputmode="numeric" maxlength="6" style="letter-spacing:4px;font-weight:700;">
+            <button type="button" class="btn btn-secondary" id="sendSavingsCodeBtn" onclick="handleSendSavingsCode()" style="white-space:nowrap;">Send Code</button>
+          </div>
+          <div class="form-hint" id="savingsOtpStatus">A code is emailed to you to approve this deposit. Tap "Send Code" first.</div>
+          <div class="form-hint" id="savingsOtpCountdown" style="display:none;color:var(--champagne);font-weight:600;"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeModal('addSavingsModal')">Cancel</button>
@@ -99,8 +103,12 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="withdrawCode">Confirmation Code (OTP)</label>
-        <input type="text" id="withdrawCode" class="form-input" placeholder="Enter the 6-digit code" inputmode="numeric" maxlength="6">
-        <div class="form-hint">A one-time code will be sent to your email to approve the withdrawal.</div>
+        <div style="display:flex;gap:10px;">
+          <input type="text" id="withdrawCode" class="form-input" placeholder="6-digit code" inputmode="numeric" maxlength="6" style="letter-spacing:4px;font-weight:700;">
+          <button type="button" class="btn btn-secondary" id="sendWithdrawCodeBtn" onclick="handleSendWithdrawCode()" style="white-space:nowrap;">Send Code</button>
+        </div>
+        <div class="form-hint" id="withdrawOtpStatus">A code is emailed to you to approve this withdrawal. Tap "Send Code" first.</div>
+        <div class="form-hint" id="withdrawOtpCountdown" style="display:none;color:var(--champagne);font-weight:600;"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('withdrawModal')">Cancel</button>

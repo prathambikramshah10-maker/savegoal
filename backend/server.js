@@ -1,8 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -11,9 +11,14 @@ const authRoutes = require('./routes/auth');
 const goalRoutes = require('./routes/goals');
 const transactionRoutes = require('./routes/transactions');
 const adminRoutes = require('./routes/admin');
+const { runSavingsReminders } = require('./utils/reminders');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Render/Heroku terminate TLS at a reverse proxy; trust one hop so the real
+// client IP (used by rate limiters) and req.protocol resolve correctly.
+app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
 
 // Enforce HTTPS in production (Render/Heroku terminate TLS at proxy)
 if (process.env.NODE_ENV === 'production') {
@@ -140,18 +145,46 @@ async function bootstrapAdmin() {
   }
 }
 
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('Connected to MongoDB');
+async function connectWithRetry() {
+  const uri = process.env.MONGODB_URI;
+  while (true) {
+    try {
+      await mongoose.connect(uri);
+      console.log('Connected to MongoDB');
+      return;
+    } catch (err) {
+      console.error('MongoDB connection error:', err.message);
+      console.error('Retrying connection in 3 seconds...');
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
+}
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+
+async function start() {
+  await connectWithRetry();
+  try {
     await bootstrapAdmin();
-    app.listen(PORT, () => {
-      console.log(`SaveGoal server running on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
+  } catch (e) {
+    console.error('Admin bootstrap error:', e.message);
+  }
+  app.listen(PORT, () => {
+    console.log(`SaveGoal server running on port ${PORT}`);
   });
+
+  // Weekly savings reminders (every 6 hours, first run after 60s)
+  const REMINDER_INTERVAL = 6 * 60 * 60 * 1000;
+  setTimeout(runSavingsReminders, 60 * 1000);
+  setInterval(runSavingsReminders, REMINDER_INTERVAL);
+}
+
+start();
 
 module.exports = app;

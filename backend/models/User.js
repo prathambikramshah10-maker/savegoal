@@ -20,7 +20,6 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
       trim: true,
       match: [/^[\d+\-\s]{7,20}$/, 'Please provide a valid phone number']
     },
@@ -33,6 +32,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['user', 'admin'],
       default: 'user'
+    },
+    lastReminderSentAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }

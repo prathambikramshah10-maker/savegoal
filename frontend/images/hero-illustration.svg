@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560">
+  <defs>
+    <linearGradient id="hwGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E8CC8E"/>
+      <stop offset="1" stop-color="#B8943E"/>
+    </linearGradient>
+    <linearGradient id="hwDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E2225"/>
+      <stop offset="1" stop-color="#0B0D0F"/>
+    </linearGradient>
+    <linearGradient id="hwCard" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1F23"/>
+      <stop offset="1" stop-color="#111416"/>
+    </linearGradient>
+    <filter id="hwShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="720" height="560" fill="transparent"/>
+
+  <!-- decorative coins -->
+  <circle cx="608" cy="120" r="26" fill="none" stroke="#D4AF6A" stroke-opacity="0.18" stroke-width="3"/>
+  <circle cx="608" cy="120" r="10" fill="#D4AF6A" fill-opacity="0.24"/>
+  <circle cx="84" cy="96" r="18" fill="none" stroke="#D4AF6A" stroke-opacity="0.14" stroke-width="3"/>
+  <rect x="76" y="428" width="18" height="42" rx="4" fill="#D4AF6A" fill-opacity="0.16"/>
+  <rect x="80" y="470" width="10" height="26" rx="3" fill="#D4AF6A" fill-opacity="0.1"/>
+
+  <!-- phone body -->
+  <g filter="url(#hwShadow)">
+    <rect x="212" y="30" width="296" height="500" rx="40" fill="url(#hwDark)" stroke="#292D31" stroke-width="2"/>
+    <rect x="225" y="44" width="270" height="472" rx="30" fill="url(#hwCard)"/>
+    <!-- notch -->
+    <rect x="312" y="56" width="88" height="16" rx="8" fill="#0B0D0F"/>
+  </g>
+
+  <!-- screen header -->
+  <text x="360" y="106" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#F5F1E8">My Savings</text>
+  <circle cx="248" cy="100" r="12" fill="url(#hwGold)"/>
+  <text x="248" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#0B0D0F">SG</text>
+
+  <!-- stat pill -->
+  <rect x="248" y="128" width="224" height="84" rx="14" fill="#15191D" stroke="#292D31" stroke-width="1.5"/>
+  <text x="268" y="154" font-family="Arial, sans-serif" font-size="13" fill="#A9A49A">TOTAL SAVED</text>
+  <text x="268" y="190" font-family="Arial, sans-serif" font-size="26" font-weight="800" fill="#D4AF6A">NPR 2 45 000</text>
+
+  <!-- progress card -->
+  <rect x="248" y="228" width="224" height="150" rx="14" fill="#15191D" stroke="#292D31" stroke-width="1.5"/>
+  <text x="268" y="258" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#F5F1E8">Trip to Pokhara</text>
+  <text x="268" y="278" font-family="Arial, sans-serif" font-size="12" fill="#A9A49A">Travel · 82% complete</text>
+  <rect x="268" y="296" width="184" height="10" rx="5" fill="#1E2225"/>
+  <rect x="268" y="296" width="150" height="10" rx="5" fill="url(#hwGold)"/>
+  <text x="268" y="332" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#D4AF6A">NPR 120 000</text>
+  <text x="452" y="332" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#6B6860">of 145 000</text>
+  <rect x="268" y="348" width="60" height="18" rx="9" fill="#D4AF6A"/>
+  <text x="298" y="361" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#0B0D0F">+ DEPOSIT</text>
+
+  <!-- streak chip -->
+  <rect x="248" y="394" width="224" height="58" rx="14" fill="#15191D" stroke="#292D31" stroke-width="1.5"/>
+  <text x="268" y="430" font-family="Arial, sans-serif" font-size="26" font-weight="800" fill="#E8CC8E">12</text>
+  <text x="306" y="430" font-family="Arial, sans-serif" font-size="13" fill="#A9A49A">day savings streak 🔥</text>
+
+  <!-- bottom nav dots -->
+  <rect x="286" y="478" width="148" height="22" rx="11" fill="#1E2225"/>
+  <circle cx="304" cy="489" r="6" fill="url(#hwGold)"/>
+  <circle cx="330" cy="489" r="6" fill="#292D31"/>
+  <circle cx="356" cy="489" r="6" fill="#292D31"/>
+  <circle cx="382" cy="489" r="6" fill="#292D31"/>
+  <circle cx="408" cy="489" r="6" fill="#292D31"/>
+
+  <!-- floating card badge -->
+  <g filter="url(#hwShadow)">
+    <rect x="470" y="300" width="156" height="96" rx="16" fill="#15191D" stroke="#D4AF6A" stroke-opacity="0.45" stroke-width="1.5"/>
+    <text x="490" y="330" font-family="Arial, sans-serif" font-size="11" fill="#A9A49A">GOAL COMPLETED</text>
+    <text x="490" y="358" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="#3FA76C">✓ 100%</text>
+    <path d="M546 -8 L566 -8 L584 -8" stroke="#D4AF6A" stroke-width="3" stroke-linecap="round"/>
+    <text x="490" y="382" font-family="Arial, sans-serif" font-size="11" fill="#6B6860">New Laptop 🎉</text>
+  </g>
+
+  <!-- floating deposit chip -->
+  <g filter="url(#hwShadow)">
+    <rect x="96" y="150" width="150" height="58" rx="14" fill="#15191D" stroke="#D4AF6A" stroke-opacity="0.5" stroke-width="1.5"/>
+    <circle cx="122" cy="179" r="14" fill="url(#hwGold)"/>
+    <text x="122" y="184" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="#0B0D0F">+</text>
+    <text x="148" y="172" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#F5F1E8">NPR 10 000</text>
+    <text x="148" y="190" font-family="Arial, sans-serif" font-size="11" fill="#A9A49A">added just now</text>
+  </g>
+</svg>

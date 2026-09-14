@@ -47,6 +47,9 @@
         </div>
       </div>
 
+      <!-- At-risk alerts -->
+      <div id="atRiskBanner"></div>
+
       <!-- Savings Streak -->
       <div class="card" style="margin-bottom:32px;" id="streakCard">
         <div class="section-header" style="margin-bottom:16px;">
@@ -74,10 +77,37 @@
         </div>
       </div>
 
+      <!-- Monthly Savings Chart -->
+      <div class="card" style="margin-bottom:32px;" id="monthlyChartCard">
+        <div class="section-header" style="margin-bottom:16px;">
+          <h2 class="section-title" style="font-size:1.1rem;">📊 Savings in the Last 6 Months</h2>
+        </div>
+        <div id="monthlyChart" style="min-height:40px;">
+          <div class="loading-overlay" style="padding:16px;">
+            <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card" style="margin-bottom:32px;" id="recentActivityCard">
+        <div class="section-header" style="margin-bottom:16px;">
+          <h2 class="section-title" style="font-size:1.1rem;">🕑 Recent Activity</h2>
+        </div>
+        <div id="recentActivityContainer">
+          <div class="loading-overlay" style="padding:16px;">
+            <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Goals Section -->
       <div class="section-header">
         <h2 class="section-title">Savings Goals</h2>
-        <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="exportAllCSV()">📥 Export All CSV</button>
+          <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
+        </div>
       </div>
 
       <div id="goalsContainer">

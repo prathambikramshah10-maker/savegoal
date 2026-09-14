@@ -2,12 +2,29 @@ const express = require('express');
 const SavingsGoal = require('../models/SavingsGoal');
 const SavingsTransaction = require('../models/SavingsTransaction');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 const { savingsSchema } = require('../middleware/validation');
 const { createAndSendOtp, verifyOtp } = require('../utils/otp');
 const { updateGoalFromTransactions } = require('../utils/goalHelper');
 const { checkAndNotifyMilestones } = require('./goals');
 
 const router = express.Router();
+
+const otpActionLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many verification actions. Please try again later.' }
+});
+
+const handleOtpSendError = (err, res) => {
+  if (err.code === 'OTP_COOLDOWN') {
+    return res.status(429).json({ error: err.message, cooldownMs: err.cooldownMs });
+  }
+  if (err.code === 'OTP_RATE_LIMIT') {
+    return res.status(429).json({ error: err.message });
+  }
+  return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
+};
 
 router.use(auth);
 
@@ -57,7 +74,7 @@ router.post('/:id/savings', async (req, res) => {
   }
 });
 
-router.post('/:id/savings/:transactionId/confirm', async (req, res) => {
+router.post('/:id/savings/:transactionId/confirm', otpActionLimiter, async (req, res) => {
   try {
     const { code } = req.body;
     const transaction = await SavingsTransaction.findOne({
@@ -74,15 +91,24 @@ router.post('/:id/savings/:transactionId/confirm', async (req, res) => {
 
     const user = await require('../models/User').findById(req.userId);
     if (!code) {
-      await createAndSendOtp(user.email, 'withdrawal');
-      return res.json({
-        message: 'A confirmation code has been sent to your email.',
+      let otpResult;
+      try {
+        otpResult = await createAndSendOtp(user.email, 'deposit');
+      } catch (err) {
+        return handleOtpSendError(err, res);
+      }
+      const payload = {
+        message: 'A 6-digit confirmation code has been sent to your email.',
         confirmRequired: true,
-        transactionId: transaction._id
-      });
+        transactionId: transaction._id,
+        cooldownMs: otpResult.cooldownMs,
+        expiresInMin: otpResult.expiresInMin
+      };
+      if (otpResult.devCode) payload.devCode = otpResult.devCode;
+      return res.json(payload);
     }
 
-    const result = await verifyOtp(user.email, code, 'withdrawal');
+    const result = await verifyOtp(user.email, code, 'deposit');
     if (!result.valid) {
       return res.status(400).json({ error: result.error });
     }
@@ -104,9 +130,9 @@ router.post('/:id/savings/:transactionId/confirm', async (req, res) => {
   }
 });
 
-router.post('/:id/withdraw', async (req, res) => {
+router.post('/:id/withdraw', otpActionLimiter, async (req, res) => {
   try {
-    const { amount, code } = req.body;
+    const { amount } = req.body;
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Withdrawal amount must be greater than 0' });
     }
@@ -124,11 +150,11 @@ router.post('/:id/withdraw', async (req, res) => {
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     const deposits = confirmed[0] ? confirmed[0].total : 0;
-    const withdrawals = (await SavingsTransaction.aggregate([
+    const withdrawalRows = await SavingsTransaction.aggregate([
       { $match: { goalId: goal._id, userId: req.userId, status: 'confirmed', type: 'withdrawal' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
-    ])[0]) || { total: 0 };
-    const withdrawTotal = withdrawals.total || 0;
+    ]);
+    const withdrawTotal = withdrawalRows[0] ? withdrawalRows[0].total : 0;
     const available = deposits - withdrawTotal;
 
     if (amount > available) {
@@ -136,13 +162,23 @@ router.post('/:id/withdraw', async (req, res) => {
     }
 
     const user = await require('../models/User').findById(req.userId);
+    const { code } = req.body;
     if (!code) {
-      await createAndSendOtp(user.email, 'withdrawal');
-      return res.json({
-        message: 'A confirmation code has been sent to your email to approve this withdrawal.',
+      let otpResult;
+      try {
+        otpResult = await createAndSendOtp(user.email, 'withdrawal');
+      } catch (err) {
+        return handleOtpSendError(err, res);
+      }
+      const payload = {
+        message: 'A 6-digit confirmation code has been sent to your email to approve this withdrawal.',
         confirmRequired: true,
-        amount
-      });
+        amount,
+        cooldownMs: otpResult.cooldownMs,
+        expiresInMin: otpResult.expiresInMin
+      };
+      if (otpResult.devCode) payload.devCode = otpResult.devCode;
+      return res.json(payload);
     }
 
     const result = await verifyOtp(user.email, code, 'withdrawal');

@@ -22,17 +22,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
   try {
-    const [statsRes, goalsRes, streakRes] = await Promise.all([
+    const [statsRes, goalsRes, streakRes, monthlyRes] = await Promise.all([
       api.get('/goals/stats'),
       api.get('/goals'),
-      api.get('/goals/streak')
+      api.get('/goals/streak'),
+      api.get('/goals/monthly')
     ]);
 
     updateStats(statsRes.stats, statsRes.recentTransactions);
     currentGoals = goalsRes.goals;
     renderGoals(currentGoals);
     renderStreak(streakRes);
+    renderMonthlyChart(monthlyRes.months);
     checkProgressMilestones(currentGoals);
+    renderAtRiskAlerts(currentGoals);
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -107,6 +110,145 @@ function updateStats(stats, recentTransactions) {
   if (stats.totalGoals === 0) {
     document.getElementById('overallProgressCard').style.display = 'none';
   }
+
+  renderRecentActivity(recentTransactions || []);
+}
+
+/* --- Recent Activity Feed --- */
+function renderRecentActivity(transactions) {
+  const container = document.getElementById('recentActivityContainer');
+  if (!container) return;
+
+  if (!transactions.length) {
+    container.innerHTML = `
+      <div class="activity-item" style="justify-content:center;text-align:center;color:var(--text-muted);">
+        No activity yet. Make your first deposit to see it here!
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = transactions.map((t) => {
+    const isDeposit = t.type === 'deposit';
+    const isPending = t.status === 'pending';
+    const icon = isDeposit ? '💰' : '🏧';
+    const statusChip = isPending
+      ? '<span class="activity-status pending">Pending</span>'
+      : `<span class="activity-status ${t.status === 'confirmed' ? 'confirmed' : 'cancelled'}">${t.status}</span>`;
+    const goalName = t.goalId && t.goalId.name ? `<div class="activity-goal">${escapeHtml(t.goalId.name)}</div>` : '';
+    const amount = formatNPR(t.amount);
+
+    return `
+      <div class="activity-item">
+        <div class="activity-icon">${icon}</div>
+        <div class="activity-body">
+          <div class="activity-title">${isDeposit ? 'Added savings' : 'Withdrawn'} <strong class="${isDeposit ? 'act-deposit' : 'act-withdraw'}">${isDeposit ? '' : '-'}${amount}</strong></div>
+          ${goalName}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          ${statusChip}
+          <span class="activity-date">${formatDateShort(t.date)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* --- Monthly Savings Chart --- */
+function renderMonthlyChart(months) {
+  const container = document.getElementById('monthlyChart');
+  if (!container) return;
+
+  const card = document.getElementById('monthlyChartCard');
+  if (!months || months.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const highest = Math.max(...months.map((m) => m.total), 1);
+
+  container.innerHTML = `
+    <div class="chart-bars">
+      ${months.map((m) => {
+        const h = Math.max(4, Math.round((m.total / highest) * 100));
+        const isCurrent = m.year === new Date().getFullYear() && m.label === new Date().toLocaleString('en-US', { month: 'short' });
+        return `
+          <div class="chart-col">
+            <div class="chart-value">${m.total > 0 ? formatNPR(m.total) : '—'}</div>
+            <div class="chart-bar ${m.total > 0 ? '' : 'chart-bar-empty'} ${isCurrent ? 'chart-bar-current' : ''}" style="height:${h}%"></div>
+            <div class="chart-label">${m.label}${isCurrent ? ' •' : ''}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:8px;">Net amount saved each month (deposits − withdrawals)</div>
+  `;
+}
+
+/* --- Export all transactions --- */
+function exportAllCSV() {
+  const url = API_BASE + '/goals/export-all';
+  fetch(url, { headers: { 'Authorization': `Bearer ${getToken()}` } })
+    .then(res => {
+      if (!res.ok) throw new Error('Export failed');
+      return res.blob();
+    })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'savegoal_all_transactions.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('All transactions exported to CSV', 'success');
+    })
+    .catch(err => showToast(err.message, 'error'));
+}
+
+/* --- At-risk goal detection --- */
+function computeAtRisk(goal) {
+  if (goal.status !== 'active' || goal.isLocked) return null;
+  const remaining = goal.targetAmount - goal.currentAmount;
+  if (remaining <= 0) return null;
+
+  const b = calculateBudget(goal.targetAmount, goal.currentAmount, goal.targetDate);
+  const created = new Date(goal.createdAt || Date.now());
+  const monthsActive = Math.max(1, (Date.now() - created) / (1000 * 60 * 60 * 24 * 30.44));
+  const avgMonthly = Math.max(0, goal.currentAmount / monthsActive);
+
+  if (b.monthsLeft <= 1) {
+    const days = Math.max(1, Math.ceil((new Date(goal.targetDate) - new Date()) / (1000 * 60 * 60 * 24)));
+    if (avgMonthly * days < remaining * 0.9) return { reason: 'deadline' };
+    return null;
+  }
+
+  const required = remaining / b.monthsLeft;
+  if (avgMonthly === 0) return null;
+  if (required > avgMonthly * 2.5) return { reason: 'pace' };
+  return null;
+}
+
+function renderAtRiskAlerts(goals) {
+  const atRisk = goals.map(g => ({ goal: g, risk: computeAtRisk(g) })).filter(x => x.risk);
+  const container = document.getElementById('atRiskBanner');
+  if (!container) return;
+
+  if (atRisk.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = atRisk.map(({ goal, risk }) => {
+    const b = calculateBudget(goal.targetAmount, goal.currentAmount, goal.targetDate);
+    const msg = risk.reason === 'deadline'
+      ? `"${escapeHtml(goal.name)}" is due ${daysUntil(goal.targetDate)} and may fall short. You'd need ~${formatNPR(b.monthly)}/month.`
+      : `"${escapeHtml(goal.name)}" is behind pace. You'd need ~${formatNPR(b.monthly)}/month to finish on time.`;
+    return `
+      <div class="at-risk-alert">
+        <span class="at-risk-icon">⚠️</span>
+        <div>${msg} <a href="goal.html?id=${goal._id}" style="font-weight:600;text-decoration:underline;">Go to goal</a></div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderGoals(goals) {

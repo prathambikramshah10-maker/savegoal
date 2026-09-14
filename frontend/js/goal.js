@@ -4,6 +4,9 @@
 
 let currentGoal = null;
 let pendingTransactionId = null;
+let pendingSavingsTxId = null;
+let pendingWithdrawAmount = null;
+let otpCountdownTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
@@ -288,18 +291,24 @@ function initAddSavingsForm(goalId) {
       showToast(`Amount cannot exceed remaining ${formatNPR(remaining)}`, 'error');
       return;
     }
-    if (!otp) {
-      showToast('A confirmation code is required to confirm your deposit', 'error');
+    if (!/^\d{6}$/.test(otp)) {
+      showToast('Tap "Send Code", then enter the 6-digit code from your email', 'error');
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Adding...';
+    btn.textContent = 'Confirming...';
 
     try {
-      const data = await api.post(`/goals/${goalId}/savings`, { amount, note });
-      const txId = data.transaction._id;
+      let txId = pendingSavingsTxId;
+      if (!txId) {
+        const createData = await api.post(`/goals/${goalId}/savings`, { amount, note });
+        txId = createData.transaction._id;
+      }
+
       const confirmRes = await api.post(`/goals/${goalId}/savings/${txId}/confirm`, { code: otp });
+      pendingSavingsTxId = null;
+      stopOtpCountdown();
       showToast('Savings added and confirmed!', 'success');
       closeModal('addSavingsModal');
       currentGoal = confirmRes.goal;
@@ -315,11 +324,67 @@ function initAddSavingsForm(goalId) {
   });
 }
 
+async function handleSendSavingsCode() {
+  if (!currentGoal) return;
+
+  const amount = parseFloat(document.getElementById('savingsAmount').value);
+  const note = document.getElementById('savingsNote').value.trim();
+  const goalId = new URLSearchParams(window.location.search).get('id');
+  const btn = document.getElementById('sendSavingsCodeBtn');
+  const statusEl = document.getElementById('savingsOtpStatus');
+  const countdownEl = document.getElementById('savingsOtpCountdown');
+
+  if (!amount || amount <= 0) {
+    showToast('Enter the amount first', 'error');
+    return;
+  }
+  const remaining = currentGoal.targetAmount - currentGoal.currentAmount;
+  if (amount > remaining) {
+    showToast(`Amount cannot exceed remaining ${formatNPR(remaining)}`, 'error');
+    return;
+  }
+
+  setLoading(btn, true);
+  try {
+    if (!pendingSavingsTxId) {
+      const createData = await api.post(`/goals/${goalId}/savings`, { amount, note });
+      pendingSavingsTxId = createData.transaction._id;
+    }
+
+    const data = await api.post(`/goals/${goalId}/savings/${pendingSavingsTxId}/confirm`, {});
+    statusEl.style.color = 'var(--text-secondary)';
+    statusEl.textContent = data.devCode
+      ? `Dev mode (email not configured): your code is ${data.devCode}`
+      : 'Verification code sent! Check your email for the 6-digit code.';
+    startOtpCountdown(data.cooldownMs ? Math.ceil(data.cooldownMs / 1000) : 60, countdownEl);
+  } catch (err) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = err.message;
+    if (err.cooldownMs) startOtpCountdown(Math.ceil(err.cooldownMs / 1000), countdownEl);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
 function openConfirmSavingsModal(transactionId) {
   pendingTransactionId = transactionId;
-  document.getElementById('pendingSavingsInfo').innerHTML = `<p>Enter the confirmation code we sent to your email to finalize this deposit.</p>`;
+  document.getElementById('pendingSavingsInfo').innerHTML = `<p style="margin-bottom:0;">Sending a verification code to your email...</p>`;
   document.getElementById('pendingConfirmCode').value = '';
   openModal('confirmSavingsModal');
+
+  const goalId = new URLSearchParams(window.location.search).get('id');
+  api.post(`/goals/${goalId}/savings/${transactionId}/confirm`, {})
+    .then((data) => {
+      const info = document.getElementById('pendingSavingsInfo');
+      info.innerHTML = data.devCode
+        ? `<p style="margin-bottom:0;">Dev mode (email not configured): your code is <strong>${data.devCode}</strong></p>`
+        : `<p style="margin-bottom:0;">A 6-digit confirmation code was sent to your email. Enter it below to finalize this deposit.</p>`;
+      startOtpCountdown(data.cooldownMs ? Math.ceil(data.cooldownMs / 1000) : 60, document.getElementById('savingsOtpCountdown'));
+    })
+    .catch((err) => {
+      const info = document.getElementById('pendingSavingsInfo');
+      info.innerHTML = `<p style="margin-bottom:0;color:var(--danger);">${err.message}</p>`;
+    });
 }
 
 function initConfirmSavings() {
@@ -328,13 +393,14 @@ function initConfirmSavings() {
   btn.addEventListener('click', async () => {
     const goalId = new URLSearchParams(window.location.search).get('id');
     const code = document.getElementById('pendingConfirmCode').value.trim();
-    if (!code) {
-      showToast('Please enter the confirmation code', 'error');
+    if (!/^\d{6}$/.test(code)) {
+      showToast('Enter the 6-digit code from your email', 'error');
       return;
     }
     try {
       const data = await api.post(`/goals/${goalId}/savings/${pendingTransactionId}/confirm`, { code });
       pendingTransactionId = null;
+      stopOtpCountdown();
       showToast('Savings confirmed!', 'success');
       closeModal('confirmSavingsModal');
       currentGoal = data.goal;
@@ -359,7 +425,9 @@ function initWithdrawForm(goalId) {
   const btn = document.getElementById('withdrawBtn');
   if (!btn) return;
   btn.addEventListener('click', async () => {
-    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    const amount = pendingWithdrawAmount !== null
+      ? pendingWithdrawAmount
+      : parseFloat(document.getElementById('withdrawAmount').value);
     const code = document.getElementById('withdrawCode').value.trim();
 
     if (!amount || amount <= 0) {
@@ -370,8 +438,8 @@ function initWithdrawForm(goalId) {
       showToast('Withdrawal amount exceeds available balance', 'error');
       return;
     }
-    if (!code) {
-      showToast('A confirmation code is required to approve the withdrawal', 'error');
+    if (!/^\d{6}$/.test(code)) {
+      showToast('Tap "Send Code", then enter the 6-digit code from your email', 'error');
       return;
     }
 
@@ -379,6 +447,8 @@ function initWithdrawForm(goalId) {
     btn.textContent = 'Processing...';
     try {
       const data = await api.post(`/goals/${goalId}/withdraw`, { amount, code });
+      pendingWithdrawAmount = null;
+      stopOtpCountdown();
       showToast('Withdrawal completed', 'success');
       closeModal('withdrawModal');
       currentGoal = data.goal;
@@ -392,6 +462,90 @@ function initWithdrawForm(goalId) {
       btn.textContent = 'Withdraw Funds';
     }
   });
+}
+
+async function handleSendWithdrawCode() {
+  if (!currentGoal) return;
+
+  const amount = parseFloat(document.getElementById('withdrawAmount').value);
+  const goalId = new URLSearchParams(window.location.search).get('id');
+  const btn = document.getElementById('sendWithdrawCodeBtn');
+  const statusEl = document.getElementById('withdrawOtpStatus');
+  const countdownEl = document.getElementById('withdrawOtpCountdown');
+
+  if (!amount || amount <= 0) {
+    showToast('Enter a valid withdrawal amount', 'error');
+    return;
+  }
+  if (amount > currentGoal.currentAmount) {
+    showToast('Withdrawal amount exceeds available balance', 'error');
+    return;
+  }
+
+  setLoading(btn, true);
+  try {
+    const data = await api.post(`/goals/${goalId}/withdraw`, { amount });
+
+    if (data.confirmRequired) {
+      pendingWithdrawAmount = amount;
+      statusEl.style.color = 'var(--text-secondary)';
+      statusEl.textContent = data.devCode
+        ? `Dev mode (email not configured): your code is ${data.devCode}`
+        : 'Verification code sent! Check your email for the 6-digit code.';
+      startOtpCountdown(data.cooldownMs ? Math.ceil(data.cooldownMs / 1000) : 60, countdownEl);
+    } else {
+      pendingWithdrawAmount = null;
+      showToast('Withdrawal completed', 'success');
+      closeModal('withdrawModal');
+      currentGoal = data.goal;
+      renderGoalDetail(data.goal);
+      const transRes = await api.get(`/goals/${goalId}/transactions`);
+      renderTransactions(transRes.transactions);
+    }
+  } catch (err) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = err.message;
+    if (err.cooldownMs) startOtpCountdown(Math.ceil(err.cooldownMs / 1000), countdownEl);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+function startOtpCountdown(seconds, countdownEl) {
+  stopOtpCountdown();
+  if (!countdownEl) return;
+  countdownEl.style.display = 'block';
+  countdownEl.textContent = `Resend code in ${seconds}s`;
+
+  otpCountdownTimer = setInterval(() => {
+    seconds -= 1;
+    if (seconds <= 0) {
+      stopOtpCountdown();
+      countdownEl.style.display = 'none';
+      countdownEl.textContent = '';
+      return;
+    }
+    countdownEl.textContent = `Resend code in ${seconds}s`;
+  }, 1000);
+}
+
+function stopOtpCountdown() {
+  if (otpCountdownTimer) {
+    clearInterval(otpCountdownTimer);
+    otpCountdownTimer = null;
+  }
+}
+
+function setLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.originalText = btn.innerHTML;
+    btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+    btn.disabled = false;
+  }
 }
 
 function openEditGoalModal() {

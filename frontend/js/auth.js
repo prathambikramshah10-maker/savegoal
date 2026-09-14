@@ -5,12 +5,32 @@
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
 
-  const loginForm = document.getElementById('loginForm');
   const registerForm = document.getElementById('registerForm');
+  const loginForm = document.getElementById('loginForm');
 
   if (loginForm) initLoginForm(loginForm);
   if (registerForm) initRegisterForm(registerForm);
 });
+
+/* ============================================================
+   Two-step sign-in: password first, then verification code
+   ============================================================ */
+
+let otpCountdownTimer = null;
+let loginEmail = null;
+
+function getOtpErrorEl() {
+  return document.querySelector('.form-error-global');
+}
+
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+  input.focus();
+}
 
 function initLoginForm(form) {
   if (redirectIfAuth()) return;
@@ -24,19 +44,27 @@ function initLoginForm(form) {
     const btn = form.querySelector('button[type="submit"]');
 
     if (!email || !password) {
-      showFormError(errorEl, 'Please fill in all fields');
+      showFormError(errorEl, 'Please fill in both email and password');
       return;
     }
 
-    setLoading(btn, true);
     hideFormError(errorEl);
+    setLoading(btn, true);
 
     try {
       const data = await api.post('/auth/login', { email, password });
-      setAuth(data.token, data.user);
-      showToast('Welcome back, ' + data.user.name + '!', 'success');
-      const role = data.user.role || 'user';
-      window.location.href = role === 'admin' ? 'admin.html' : 'dashboard.html';
+      loginEmail = email;
+      document.getElementById('otpStep2').style.display = 'block';
+      form.style.display = 'none';
+      document.getElementById('otpCode').value = '';
+
+      if (data.devCode) {
+        showFormInfo('Dev mode (email not configured): your code is <strong>' + data.devCode + '</strong>');
+      } else {
+        showFormInfo('Password correct! A verification code was sent to <strong>' + email + '</strong>. Check your inbox — it expires in 5 minutes.');
+      }
+
+      startOtpCountdown(data.cooldownMs ? Math.ceil(data.cooldownMs / 1000) : 60, data.expiresInMin || 5);
     } catch (err) {
       showFormError(errorEl, err.message);
     } finally {
@@ -45,8 +73,159 @@ function initLoginForm(form) {
   });
 }
 
+async function handleVerifyOtp() {
+  const errorEl = getOtpErrorEl();
+  hideFormError(errorEl);
+
+  const email = (loginEmail || '').trim();
+  const code = document.getElementById('otpCode').value.trim();
+
+  if (!email) {
+    showFormError(errorEl, 'Session expired. Please sign in again.');
+    return;
+  }
+  if (!/^\d{6}$/.test(code)) {
+    showFormError(errorEl, 'Enter the 6-digit code from your email');
+    return;
+  }
+
+  const btn = document.getElementById('verifyOtpBtn');
+  setLoading(btn, true);
+
+  try {
+    const data = await api.post('/auth/otp/verify', { email, code });
+    setAuth(data.token, data.user);
+    stopOtpCountdown();
+    showToast(data.message || 'Signed in successfully!', 'success');
+    const role = data.user.role || 'user';
+    window.location.href = role === 'admin' ? 'admin.html' : 'dashboard.html';
+  } catch (err) {
+    showFormError(errorEl, err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function handleResendOtp() {
+  const errorEl = getOtpErrorEl();
+  hideFormError(errorEl);
+
+  const email = (loginEmail || document.getElementById('email').value.trim());
+  if (!email) {
+    showFormError(errorEl, 'Please enter your email');
+    return;
+  }
+
+  const btn = document.getElementById('resendOtpBtn');
+  setLoading(btn, true);
+
+  try {
+    const data = await api.post('/auth/otp/send', { email });
+    if (data.devCode) {
+      showFormInfo('Dev mode (email not configured): your code is <strong>' + data.devCode + '</strong>');
+    } else {
+      showFormInfo('A new verification code was sent to <strong>' + email + '</strong>.');
+    }
+    startOtpCountdown(data.cooldownMs ? Math.ceil(data.cooldownMs / 1000) : 60, data.expiresInMin || 5);
+  } catch (err) {
+    if (err.cooldownMs) {
+      startOtpCountdown(Math.ceil(err.cooldownMs / 1000));
+      showFormInfo('Too many requests. Try again after the countdown.');
+    }
+    showFormError(errorEl, err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+function resetOtpPanel() {
+  stopOtpCountdown();
+  const form = document.getElementById('loginForm');
+  form.style.display = '';
+  document.getElementById('otpStep2').style.display = 'none';
+  document.getElementById('otpCode').value = '';
+  loginEmail = null;
+  hideFormError(getOtpErrorEl());
+}
+
+function startOtpCountdown(seconds, expiresInMin) {
+  stopOtpCountdown();
+
+  const countdownEl = document.getElementById('otpCountdown');
+  const resendBtn = document.getElementById('resendOtpBtn');
+  countdownEl.textContent = `Resend in ${seconds}s`;
+  resendBtn.disabled = true;
+  resendBtn.textContent = 'Resend Code';
+
+  otpCountdownTimer = setInterval(() => {
+    seconds -= 1;
+    if (seconds <= 0) {
+      stopOtpCountdown();
+      countdownEl.textContent = '';
+      resendBtn.disabled = false;
+      resendBtn.textContent = 'Resend Code';
+      if (expiresInMin) {
+        showFormInfo('The code is still valid. Available again now.');
+      }
+      return;
+    }
+    countdownEl.textContent = `Resend in ${seconds}s`;
+  }, 1000);
+}
+
+function stopOtpCountdown() {
+  if (otpCountdownTimer) {
+    clearInterval(otpCountdownTimer);
+    otpCountdownTimer = null;
+  }
+}
+
+function showFormInfo(msg) {
+  const info = document.getElementById('otpStatus') || getOtpErrorEl();
+  info.innerHTML = msg;
+  info.style.color = 'var(--champagne)';
+  info.style.display = 'block';
+}
+
+function updatePasswordStrength(password) {
+  const fill = document.getElementById('pwMeterFill');
+  const label = document.getElementById('pwMeterLabel');
+  if (!fill || !label) return;
+
+  if (!password) {
+    fill.style.width = '0%';
+    label.textContent = '';
+    return;
+  }
+
+  let score = 0;
+  if (password.length >= 6) score += 1;
+  if (password.length >= 10) score += 1;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+  score = Math.min(score, 5);
+
+  const levels = [
+    { min: 4, color: '#4CAF50', text: 'Strong' },
+    { min: 3, color: '#d19a2a', text: 'Medium' },
+    { min: 2, color: '#e67e22', text: 'Weak' },
+    { min: 0, color: '#C44D4D', text: 'Too weak' }
+  ];
+  const level = levels.find((l) => score >= l.min);
+  fill.style.width = (score / 5) * 100 + '%';
+  fill.style.backgroundColor = level.color;
+  label.textContent = level.text;
+  label.style.color = level.color;
+}
+
 function initRegisterForm(form) {
   if (redirectIfAuth()) return;
+
+  const pwInput = form.querySelector('#password');
+  if (pwInput) {
+    pwInput.addEventListener('input', (e) => updatePasswordStrength(e.target.value));
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -4,28 +4,21 @@ const SavingsTransaction = require('../models/SavingsTransaction');
 const auth = require('../middleware/auth');
 const { goalSchema } = require('../middleware/validation');
 const { updateGoalFromTransactions } = require('../utils/goalHelper');
-const nodemailer = require('nodemailer');
+const { sendMail } = require('../utils/mailer');
 
 async function sendMilestoneEmail(userEmail, userName, goalName, percentage) {
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
     const subject = percentage === 100
       ? `🎉 Congratulations! You completed "${goalName}"!`
       : `🎯 "${goalName}" reached ${percentage}%!`;
     const body = percentage === 100
       ? `<h2>Congratulations, ${userName}! 🎉</h2><p>You've reached <strong>100%</strong> of your savings goal <strong>"${goalName}"</strong>!</p><p>This is a huge achievement. Keep up the great work!</p><p style="margin-top:24px;"><a href="https://savegoal-br74.onrender.com/dashboard.html" style="background:#D4AF6A;color:#0B0D0F;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View Dashboard</a></p>`
       : `<h2>Great progress, ${userName}! 🎯</h2><p>Your savings goal <strong>"${goalName}"</strong> has reached <strong>${percentage}%</strong>!</p><p>Keep saving — you're getting closer to your target!</p><p style="margin-top:24px;"><a href="https://savegoal-br74.onrender.com/dashboard.html" style="background:#D4AF6A;color:#0B0D0F;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View Goal</a></p>`;
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER || 'noreply@savegoal.com',
+    await sendMail({
       to: userEmail,
       subject,
-      html: body
+      html: body,
+      text: `Savings update: "${goalName}" has reached ${percentage}%. Open your dashboard to see the progress.`
     });
   } catch (e) {
     console.log('Milestone email failed:', e.message);
@@ -195,6 +188,70 @@ router.get('/stats', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Error fetching stats' });
+  }
+});
+
+/* Monthly net savings for the last 6 months (confirmed deposits - withdrawals) */
+router.get('/monthly', async (req, res) => {
+  try {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      months.push({
+        key,
+        label: d.toLocaleString('en-US', { month: 'short' }),
+        year: d.getFullYear(),
+        shortLabel: d.toLocaleString('en-US', { month: 'short' })
+      });
+    }
+
+    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const transactions = await SavingsTransaction.find({
+      userId: req.userId,
+      status: 'confirmed',
+      date: { $gte: start }
+    }).lean();
+
+    const map = {};
+    transactions.forEach((t) => {
+      const d = new Date(t.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const delta = t.type === 'deposit' ? t.amount : -t.amount;
+      map[key] = (map[key] || 0) + delta;
+    });
+
+    res.json({
+      months: months.map((m) => ({ ...m, total: Math.round(map[m.key] || 0) })),
+      highest: months.reduce((max, m) => Math.max(max, Math.round(map[m.key] || 0)), 0)
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error fetching monthly savings' });
+  }
+});
+
+/* Export ALL of the user's transactions as CSV */
+router.get('/export-all', async (req, res) => {
+  try {
+    const transactions = await SavingsTransaction.find({ userId: req.userId })
+      .sort({ date: 1 })
+      .populate('goalId', 'name')
+      .lean();
+
+    let csv = 'Date,Goal,Type,Amount (NPR),Status,Note\n';
+    transactions.forEach((t) => {
+      const date = new Date(t.date).toLocaleDateString('en-US');
+      const note = (t.note || '').replace(/,/g, ';');
+      const goal = t.goalId?.name ? `"${String(t.goalId.name).replace(/"/g, '""')}"` : '';
+      csv += `${date},${goal},${t.type},${t.amount},${t.status},"${note}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="savegoal_all_transactions.csv"');
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ error: 'Error exporting data' });
   }
 });
 
