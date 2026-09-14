@@ -244,7 +244,9 @@ router.get('/export-all', async (req, res) => {
       const date = new Date(t.date).toLocaleDateString('en-US');
       const note = (t.note || '').replace(/,/g, ';');
       const goal = t.goalId?.name ? `"${String(t.goalId.name).replace(/"/g, '""')}"` : '';
-      csv += `${date},${goal},${t.type},${t.amount},${t.status},"${note}"\n`;
+      const type = t.type || '';
+      const status = t.status || '';
+      csv += `${date},${goal},${type},${t.amount},${status},"${note}"\n`;
     });
 
     res.setHeader('Content-Type', 'text/csv');
