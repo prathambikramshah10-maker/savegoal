@@ -228,7 +228,7 @@ function renderNav() {
         </a>
         <div class="nav-links">
           <a href="login.html" class="btn btn-primary">Login</a>
-          <a href="register.html" class="btn btn-primary">Sign Up</a>
+          <a href="login.html" class="btn btn-primary">Sign In</a>
         </div>
         <button class="nav-toggle" onclick="toggleMobileNav()">
           <span></span><span></span><span></span>
@@ -406,6 +406,16 @@ function calculateBudget(targetAmount, currentAmount, targetDate) {
   const weekly = remaining / weeksLeft;
   const monthly = remaining / monthsLeft;
   return { remaining, monthsLeft, weekly: Math.round(weekly), monthly: Math.round(monthly), daily: Math.round(daily) };
+}
+
+/* --- Password visibility toggle (available on every page) --- */
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  if (btn) btn.textContent = show ? '🙈' : '👁';
+  input.focus();
 }
 
 /* --- Init --- */

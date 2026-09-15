@@ -39,7 +39,8 @@ const PURPOSE_TITLES = {
   register: 'Verify your email address',
   deposit: 'Confirm your savings deposit',
   withdrawal: 'Confirm your withdrawal',
-  admin: 'Admin verification'
+  admin: 'Admin verification',
+  reset: 'Verify your email to reset your password'
 };
 
 const PURPOSE_SUBJECTS = {
@@ -47,7 +48,8 @@ const PURPOSE_SUBJECTS = {
   register: 'Your SaveGoal Verification Code',
   deposit: 'Confirm Your SaveGoal Deposit',
   withdrawal: 'Confirm Your SaveGoal Withdrawal',
-  admin: 'Your SaveGoal Admin Code'
+  admin: 'Your SaveGoal Admin Code',
+  reset: 'Your SaveGoal Password Reset Code'
 };
 
 async function sendOtpEmail(to, code, purpose = 'login') {

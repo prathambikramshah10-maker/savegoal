@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const goalRoutes = require('./routes/goals');
 const transactionRoutes = require('./routes/transactions');
 const adminRoutes = require('./routes/admin');
+const contactRoutes = require('./routes/contact');
 const { runSavingsReminders } = require('./utils/reminders');
 
 const app = express();
@@ -98,6 +99,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/goals', transactionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -111,7 +113,7 @@ app.all('/api/*', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendDir, '404.html'));
+  res.status(404).sendFile(path.join(frontendDir, '404.html'));
 });
 
 app.use((err, req, res, next) => {
@@ -175,7 +177,7 @@ async function start() {
   } catch (e) {
     console.error('Admin bootstrap error:', e.message);
   }
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`SaveGoal server running on port ${PORT}`);
   });
 
@@ -183,6 +185,17 @@ async function start() {
   const REMINDER_INTERVAL = 6 * 60 * 60 * 1000;
   setTimeout(runSavingsReminders, 60 * 1000);
   setInterval(runSavingsReminders, REMINDER_INTERVAL);
+
+  // Graceful shutdown for platforms (Render/Railway) that send SIGTERM
+  const shutdown = () => {
+    console.log('Shutting down gracefully...');
+    server.close(() => {
+      mongoose.connection.close().finally(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(1), 10000).unref();
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 start();

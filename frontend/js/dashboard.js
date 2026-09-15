@@ -16,9 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('greeting').textContent = `${greeting}, ${user.name.split(' ')[0]}!`;
   }
 
+  const todayLine = document.getElementById('todayLine');
+  if (todayLine) {
+    todayLine.textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+    });
+  }
+
+  renderTip();
   loadDashboard();
   initCreateGoalForm();
 });
+
+const SAVINGS_TIPS = [
+  "Automate a small transfer to your goal right after payday, before you spend it.",
+  "The most effective way to save is to pay yourself first — even 5% adds up fast.",
+  "Break big goals into weekly micro-deposits to make them feel less overwhelming.",
+  "Keep your savings out of reach: the harder it is to spend, the easier it is to save.",
+  "Round up small purchases and move the spare change into your goal.",
+  "Review your subscriptions monthly — unused ones are silent savings leaks.",
+  "Reward yourself at milestones: small wins keep long-term goals motivating.",
+  "Saving isn't about how much you earn, it's about how much you keep.",
+  "Track a streak: saving every day makes it a habit, not a chore.",
+  "Don't withdraw for impulse buys — give yourself a 48-hour cooling-off rule."
+];
+
+function renderTip() {
+  const el = document.getElementById('savingsTip');
+  if (!el) return;
+  const tip = SAVINGS_TIPS[Math.floor(Math.random() * SAVINGS_TIPS.length)];
+  el.textContent = tip;
+}
 
 async function loadDashboard() {
   try {
@@ -108,7 +136,14 @@ function updateStats(stats, recentTransactions) {
   }
 
   if (stats.totalGoals === 0) {
-    document.getElementById('overallProgressCard').style.display = 'none';
+    const card = document.getElementById('overallProgressCard');
+    const body = document.getElementById('overallProgressBody');
+    const empty = document.getElementById('overallEmpty');
+    if (card && body && empty) {
+      body.style.display = 'none';
+      empty.style.display = 'block';
+      card.style.marginBottom = '32px';
+    }
   }
 
   renderRecentActivity(recentTransactions || []);
@@ -160,8 +195,15 @@ function renderMonthlyChart(months) {
   if (!container) return;
 
   const card = document.getElementById('monthlyChartCard');
-  if (!months || months.length === 0) {
-    card.style.display = 'none';
+  if (!months || months.length === 0 || months.every((m) => !m.total)) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:24px 16px;">
+        <div class="empty-state-icon">📊</div>
+        <h3>No savings recorded yet</h3>
+        <p>Once you make deposits, your monthly savings will show up here.</p>
+      </div>
+    `;
+    if (card) card.style.display = '';
     return;
   }
 
@@ -261,6 +303,12 @@ function renderGoals(goals) {
         <h3>No goals yet</h3>
         <p>Create your first savings goal and start tracking your progress!</p>
         <button class="btn btn-primary" onclick="openCreateGoalModal()">+ Create Your First Goal</button>
+        <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="quickCreateGoal('Laptop')">💻 Laptop</button>
+          <button class="btn btn-outline btn-sm" onclick="quickCreateGoal('Phone')">📱 Phone</button>
+          <button class="btn btn-outline btn-sm" onclick="quickCreateGoal('Emergency Fund')">🛡️ Emergency Fund</button>
+          <button class="btn btn-outline btn-sm" onclick="quickCreateGoal('Travel')">✈️ Travel</button>
+        </div>
       </div>
     `;
     return;
@@ -345,7 +393,7 @@ async function submitQuickDeposit() {
 
   try {
     await api.post(`/goals/${quickDepositGoalId}/savings`, { amount, note: note || 'Quick deposit' });
-    showToast('Savings added successfully!', 'success');
+    showToast('Deposit recorded. Confirm it on the goal page to update your balance.', 'info');
     closeModal('quickDepositModal');
     loadDashboard();
   } catch (err) {
@@ -407,6 +455,24 @@ function initCreateGoalForm() {
 
 function openCreateGoalModal() {
   openModal('createGoalModal');
+}
+
+function quickCreateGoal(category) {
+  const defaults = {
+    'Laptop': { name: 'New Laptop', target: 120000 },
+    'Phone': { name: 'New Phone', target: 60000 },
+    'Emergency Fund': { name: 'Emergency Fund', target: 100000 },
+    'Travel': { name: 'Dream Vacation', target: 80000 }
+  };
+  const d = defaults[category] || { name: category, target: 50000 };
+  document.getElementById('goalName').value = d.name;
+  document.getElementById('goalTarget').value = d.target;
+  const catSelect = document.getElementById('goalCategory');
+  if (Array.from(catSelect.options).some((o) => o.value === category)) {
+    catSelect.value = category;
+  }
+  document.getElementById('goalDescription').value = '';
+  openCreateGoalModal();
 }
 
 function escapeHtml(text) {

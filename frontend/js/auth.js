@@ -23,15 +23,6 @@ function getOtpErrorEl() {
   return document.querySelector('.form-error-global');
 }
 
-function togglePassword(inputId, btn) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-  const show = input.type === 'password';
-  input.type = show ? 'text' : 'password';
-  btn.textContent = show ? '🙈' : '👁';
-  input.focus();
-}
-
 function initLoginForm(form) {
   if (redirectIfAuth()) return;
 

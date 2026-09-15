@@ -267,6 +267,10 @@ router.post('/', async (req, res) => {
     const { name, targetAmount, currentAmount, targetDate, category, description } = req.body;
     const startingAmount = currentAmount || 0;
 
+    if (startingAmount > targetAmount) {
+      return res.status(400).json({ error: 'Starting amount cannot exceed the target amount' });
+    }
+
     const goal = await SavingsGoal.create({
       userId: req.userId,
       name: name.trim(),
@@ -326,11 +330,33 @@ router.put('/:id', async (req, res) => {
 
     const { name, targetAmount, targetDate, category, description, isLocked } = req.body;
 
-    if (name !== undefined) goal.name = name.trim();
-    if (targetAmount !== undefined && targetAmount > 0) goal.targetAmount = targetAmount;
-    if (targetDate !== undefined) goal.targetDate = targetDate;
-    if (category !== undefined) goal.category = category;
-    if (description !== undefined) goal.description = description.trim();
+    if (name !== undefined) {
+      if (!name || !String(name).trim()) {
+        return res.status(400).json({ error: 'Goal name is required' });
+      }
+      goal.name = String(name).trim();
+    }
+    if (targetAmount !== undefined) {
+      if (!Number.isFinite(Number(targetAmount)) || Number(targetAmount) < 1) {
+        return res.status(400).json({ error: 'Target amount must be a number greater than 0' });
+      }
+      goal.targetAmount = Number(targetAmount);
+    }
+    if (targetDate !== undefined) {
+      const d = new Date(targetDate);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ error: 'A valid target date is required' });
+      }
+      goal.targetDate = d;
+    }
+    if (category !== undefined) {
+      const validCategories = ['Emergency Fund', 'Education', 'Travel', 'Phone', 'Laptop', 'Car', 'House', 'Other'];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({ error: 'Valid category is required' });
+      }
+      goal.category = category;
+    }
+    if (description !== undefined) goal.description = String(description).trim().slice(0, 1000);
     if (isLocked !== undefined) goal.isLocked = Boolean(isLocked);
 
     await goal.save();

@@ -26,6 +26,46 @@ const handleOtpSendError = (err, res) => {
   return res.status(500).json({ error: 'Could not send verification code. Please try again.' });
 };
 
+/* Serialize money-mutating operations per goal so concurrent requests cannot
+   race past an availability check and overdraw / double-spend. Holds the lock
+   in-process; safe for a single-instance deployment. */
+const goalLocks = new Map();
+
+function withGoalLock(goalId, fn) {
+  const key = String(goalId);
+  const prev = goalLocks.get(key) || Promise.resolve();
+  const next = prev.then(fn, fn);
+  goalLocks.set(key, next);
+  next.finally(() => {
+    if (goalLocks.get(key) === next) goalLocks.delete(key);
+  });
+  return next;
+}
+
+/* Confirmed balance facts for a goal: raw confirmed deposits/withdrawals plus
+   the capped current amount that is displayed to users. */
+async function getConfirmedBalances(goal) {
+  const rows = await SavingsTransaction.aggregate([
+    { $match: { goalId: goal._id, userId: goal.userId, status: 'confirmed' } },
+    {
+      $group: {
+        _id: null,
+        deposits: { $sum: { $cond: [{ $eq: ['$type', 'deposit'] }, '$amount', 0] } },
+        withdrawals: { $sum: { $cond: [{ $eq: ['$type', 'withdrawal'] }, '$amount', 0] } }
+      }
+    }
+  ]);
+  const row = rows[0] || { deposits: 0, withdrawals: 0 };
+  const available = Math.max(0, row.deposits - row.withdrawals);
+  return {
+    deposits: row.deposits,
+    withdrawals: row.withdrawals,
+    available,
+    remaining: Math.max(0, goal.targetAmount - Math.min(available, goal.targetAmount)),
+    currentAmount: Math.min(available, goal.targetAmount)
+  };
+}
+
 router.use(auth);
 
 const appendGoalView = (goal) => ({
@@ -53,6 +93,13 @@ router.post('/:id/savings', async (req, res) => {
     }
 
     const { amount, note } = req.body;
+
+    const balances = await getConfirmedBalances(goal);
+    if (amount > balances.remaining) {
+      return res.status(400).json({
+        error: `Amount cannot exceed the remaining NPR ${balances.remaining.toLocaleString()} needed to reach your target.`
+      });
+    }
 
     const transaction = await SavingsTransaction.create({
       userId: req.userId,
@@ -145,59 +192,59 @@ router.post('/:id/withdraw', otpActionLimiter, async (req, res) => {
       return res.status(403).json({ error: 'This goal is locked and cannot be withdrawn from.' });
     }
 
-    const confirmed = await SavingsTransaction.aggregate([
-      { $match: { goalId: goal._id, userId: req.userId, status: 'confirmed', type: 'deposit' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-    const deposits = confirmed[0] ? confirmed[0].total : 0;
-    const withdrawalRows = await SavingsTransaction.aggregate([
-      { $match: { goalId: goal._id, userId: req.userId, status: 'confirmed', type: 'withdrawal' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-    const withdrawTotal = withdrawalRows[0] ? withdrawalRows[0].total : 0;
-    const available = deposits - withdrawTotal;
-
-    if (amount > available) {
-      return res.status(400).json({ error: `You can withdraw up to NPR ${available.toLocaleString()}` });
-    }
-
-    const user = await require('../models/User').findById(req.userId);
-    const { code } = req.body;
-    if (!code) {
-      let otpResult;
-      try {
-        otpResult = await createAndSendOtp(user.email, 'withdrawal');
-      } catch (err) {
-        return handleOtpSendError(err, res);
+    // Entire check-then-write sequence goes under the goal lock to prevent
+    // two concurrent withdrawals from both passing the availability check.
+    return withGoalLock(String(goal._id), async () => {
+      const balances = await getConfirmedBalances(goal);
+      if (amount > balances.available) {
+        return res.status(400).json({ error: `You can withdraw up to NPR ${balances.available.toLocaleString()}` });
       }
-      const payload = {
-        message: 'A 6-digit confirmation code has been sent to your email to approve this withdrawal.',
-        confirmRequired: true,
+
+      const user = await require('../models/User').findById(req.userId);
+      const { code } = req.body;
+      if (!code) {
+        let otpResult;
+        try {
+          otpResult = await createAndSendOtp(user.email, 'withdrawal');
+        } catch (err) {
+          return handleOtpSendError(err, res);
+        }
+        const payload = {
+          message: 'A 6-digit confirmation code has been sent to your email to approve this withdrawal.',
+          confirmRequired: true,
+          amount,
+          cooldownMs: otpResult.cooldownMs,
+          expiresInMin: otpResult.expiresInMin
+        };
+        if (otpResult.devCode) payload.devCode = otpResult.devCode;
+        return res.json(payload);
+      }
+
+      const result = await verifyOtp(user.email, code, 'withdrawal');
+      if (!result.valid) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      // Re-check availability after the OTP round-trip; the goal may have
+      // moved while the user was entering their code.
+      const freshBalances = await getConfirmedBalances(goal);
+      if (amount > freshBalances.available) {
+        return res.status(400).json({ error: `You can withdraw up to NPR ${freshBalances.available.toLocaleString()}` });
+      }
+
+      await SavingsTransaction.create({
+        userId: req.userId,
+        goalId: goal._id,
         amount,
-        cooldownMs: otpResult.cooldownMs,
-        expiresInMin: otpResult.expiresInMin
-      };
-      if (otpResult.devCode) payload.devCode = otpResult.devCode;
-      return res.json(payload);
-    }
+        type: 'withdrawal',
+        status: 'confirmed',
+        note: (req.body.note || 'Withdrawal').trim()
+      });
+      await updateGoalFromTransactions(req.params.id, req.userId);
 
-    const result = await verifyOtp(user.email, code, 'withdrawal');
-    if (!result.valid) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    await SavingsTransaction.create({
-      userId: req.userId,
-      goalId: goal._id,
-      amount,
-      type: 'withdrawal',
-      status: 'confirmed',
-      note: (req.body.note || 'Withdrawal').trim()
+      const updated = await SavingsGoal.findById(req.params.id);
+      res.json({ message: 'Withdrawal completed successfully.', goal: appendGoalView(updated) });
     });
-    await updateGoalFromTransactions(req.params.id, req.userId);
-
-    const updated = await SavingsGoal.findById(req.params.id);
-    res.json({ message: 'Withdrawal completed successfully.', goal: appendGoalView(updated) });
   } catch (err) {
     res.status(500).json({ error: 'Error processing withdrawal' });
   }

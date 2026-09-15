@@ -19,8 +19,16 @@
     <div class="container">
       <!-- Dashboard Header -->
       <div class="dashboard-header">
-        <h1 id="greeting">Loading...</h1>
-        <p>Here's an overview of your savings progress</p>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+          <div>
+            <h1 id="greeting">Loading...</h1>
+            <p id="todayLine">Here's an overview of your savings progress</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="exportAllCSV()">📥 Export CSV</button>
+            <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
+          </div>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -64,16 +72,23 @@
 
       <!-- Overall Progress -->
       <div class="card" style="margin-bottom:32px;" id="overallProgressCard">
-        <div class="progress-label">
-          <span style="font-weight:600;">Overall Savings Progress</span>
-          <span id="overallPercentage" style="font-weight:700;color:var(--primary);">0%</span>
+        <div id="overallProgressBody">
+          <div class="progress-label">
+            <span style="font-weight:600;">Overall Savings Progress</span>
+            <span id="overallPercentage" style="font-weight:700;color:var(--primary);">0%</span>
+          </div>
+          <div class="progress-bar progress-bar-lg">
+            <div class="progress-fill" id="overallBar" style="width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:var(--text-muted);">
+            <span id="overallSavedLabel">NPR 0 saved</span>
+            <span id="overallTargetLabel">Target: NPR 0</span>
+          </div>
         </div>
-        <div class="progress-bar progress-bar-lg">
-          <div class="progress-fill" id="overallBar" style="width:0%"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:var(--text-muted);">
-          <span id="overallSavedLabel">NPR 0 saved</span>
-          <span id="overallTargetLabel">Target: NPR 0</span>
+        <div id="overallEmpty" style="display:none;text-align:center;padding:8px 0;">
+          <div style="font-size:1.6rem;margin-bottom:8px;opacity:0.5;">🎯</div>
+          <p style="max-width:360px;margin:0 auto 16px;font-size:0.95rem;">Create a savings goal to start tracking your overall progress.</p>
+          <button class="btn btn-primary btn-sm" onclick="openCreateGoalModal()">+ Create Your First Goal</button>
         </div>
       </div>
 
@@ -101,13 +116,17 @@
         </div>
       </div>
 
+      <!-- Savings Tip -->
+      <div class="card" style="margin-bottom:32px;" id="savingsTipCard">
+        <div class="section-header" style="margin-bottom:12px;">
+          <h2 class="section-title" style="font-size:1.1rem;">💡 Savings Tip</h2>
+        </div>
+        <p id="savingsTip" style="font-size:0.95rem;line-height:1.7;color:var(--text-secondary);">Loading tip...</p>
+      </div>
+
       <!-- Goals Section -->
       <div class="section-header">
         <h2 class="section-title">Savings Goals</h2>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="exportAllCSV()">📥 Export All CSV</button>
-          <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
-        </div>
       </div>
 
       <div id="goalsContainer">

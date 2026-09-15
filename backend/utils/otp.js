@@ -88,7 +88,7 @@ async function createAndSendOtp(email, purpose = 'login') {
     remainingSends: Math.max(0, MAX_SENDS_PER_WINDOW - sendsInWindow - 1)
   };
 
-  if (!isConfigured()) {
+  if (!isConfigured() && process.env.NODE_ENV !== 'production') {
     result.devCode = code;
     result.devNote = 'Email SMTP is not configured yet. This code is shown only in development.';
   }

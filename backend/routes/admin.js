@@ -181,8 +181,8 @@ router.delete('/users/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.email === process.env.ADMIN_EMAIL) {
-      return res.status(400).json({ error: 'Cannot delete the main admin account' });
+    if (user.role === 'admin') {
+      return res.status(400).json({ error: 'Cannot delete an admin account' });
     }
     await SavingsTransaction.deleteMany({ userId: user._id });
     await SavingsGoal.deleteMany({ userId: user._id });

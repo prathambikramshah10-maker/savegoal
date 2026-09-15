@@ -76,8 +76,14 @@ router.post('/otp/send', otpSendLimiter, async (req, res) => {
     }
 
     const user = await User.findOne({ email });
+    const genericResponse = {
+      message: 'If an account exists with that email, a verification code has been sent.',
+      cooldownMs: 60000,
+      expiresInMin: 5
+    };
+
     if (!user) {
-      return res.status(404).json({ error: 'No account found with this email. Please register first.' });
+      return res.json(genericResponse);
     }
 
     const result = await createAndSendOtp(email, 'login');
@@ -242,8 +248,18 @@ router.put('/me', auth, async (req, res) => {
     const { name, phone, currentPassword, newPassword } = req.body;
     const user = await User.findById(req.userId);
 
-    if (name) user.name = name.trim();
-    if (phone) user.phone = phone.trim();
+    if (name !== undefined) {
+      if (!name || name.trim().length < 2) {
+        return res.status(400).json({ error: 'Name must be at least 2 characters' });
+      }
+      user.name = name.trim();
+    }
+    if (phone !== undefined) {
+      if (!phone || !/^[\d+\-\s]{7,20}$/.test(String(phone))) {
+        return res.status(400).json({ error: 'Valid phone number is required' });
+      }
+      user.phone = String(phone).trim();
+    }
 
     if (newPassword) {
       if (!currentPassword) {

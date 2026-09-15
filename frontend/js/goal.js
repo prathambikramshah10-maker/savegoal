@@ -242,7 +242,7 @@ function renderTransactionItem(t) {
     <div class="transaction-item ${isPending ? 'tx-pending' : ''} ${isCancelled ? 'tx-cancelled' : ''}">
       <div class="transaction-icon">${isWithdrawal ? '🏦' : '💰'}</div>
       <div class="transaction-info">
-        <div class="note">${t.note || (isWithdrawal ? 'Withdrawal' : 'Savings')}</div>
+        <div class="note">${escapeHtml(t.note || (isWithdrawal ? 'Withdrawal' : 'Savings'))}</div>
         <div class="date">${formatDate(t.date)} ${isCancelled ? '· Cancelled' : ''} ${isPending ? '· ⏳ Pending' : ''}</div>
       </div>
       <div class="${amountClass}">${amountSign}${formatNPR(t.amount)}</div>

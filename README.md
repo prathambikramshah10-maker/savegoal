@@ -12,26 +12,19 @@ A complete, modern, responsive savings tracking platform that helps users create
 
 ## Features
 
-- **Secure registration/login** with real email OTP verification
+- **Secure registration/login** — login is protected by a real email OTP sent to the user's inbox
 - **Savings goals** with target amount, deadline, and progress tracking
 - **Goal locking** — lock a goal to prevent deposits/withdrawals
 - **Withdrawal rules** — withdraw funds with OTP approval (only confirmed deposits count)
-- **Pending → confirmed savings** — money is only reflected in "Total Saved" after you confirm sending it
-- **Dashboard** with savings statistics and overall progress
-- **Transaction history** with deposit/withdrawal status
-- **User profile** with settings and password change
-- **Protected admin panel** (admins can manage users)
+- **Pending → confirmed savings** — money is only reflected in "Total Saved" after you confirm the deposit with an emailed code
+- **Dashboard** with savings statistics, monthly progress chart, and at-risk goals
+- **Transaction history** with deposit/withdrawal status, search, and CSV export
+- **User profile** with settings, password change, and account deletion
+- **Protected admin panel** (admins can manage users, with user/goal/transaction CSV export)
 - **MongoDB** persistence + **secure Node.js backend**
 - **Responsive** mobile/desktop design + dark/light theme
+- Password reset via emailed OTP, weekly savings-reminder emails, savings streaks, and contact form
 - Category icons, celebration animation on goal completion
-
----
-
-## Prerequisites
-
-1. **Node.js** (LTS) — https://nodejs.org
-2. **MongoDB** (local or Atlas) — https://www.mongodb.com/try/download/community
-3. **A Gmail account** for sending OTP verification emails (see setup below)
 
 ---
 
@@ -111,7 +104,7 @@ GMAIL_USER=yourname@gmail.com
 GMAIL_APP_PASSWORD=your-16-character-app-password
 ```
 
-> **No Gmail configured?** The app still works for local testing — the OTP code is printed to the **server console** instead of being emailed, so you can see it there and enter it in the form.
+> **No Gmail configured?** The app still works for local testing — when `NODE_ENV` is not `production`, the OTP code is shown in the verification form response instead of being emailed, so you can see it there and enter it.
 
 ### Step 4: Install Backend Dependencies
 
@@ -131,7 +124,7 @@ Or for development with auto-restart:
 npm run dev
 ```
 
-The server will start on `http://localhost:5000`. On first start it creates a default **admin account** (see `.env`: `ADMIN_EMAIL` / `ADMIN_PASSWORD`, default `admin@savegoal.com` / `admin12345`). **Change these in production.**
+The server will start on `http://localhost:5000`. On first start it creates a default **admin account** using the credentials in `.env` under `ADMIN_EMAIL` / `ADMIN_PASSWORD`. **Change the password in production.**
 
 ### Step 6: Start the Frontend
 
@@ -175,9 +168,7 @@ The frontend will be available at `http://localhost:3000` (or the port shown).
    - Password: password123
    - Confirm Password: password123
 4. Click "Create Account"
-5. A 6-digit verification code is sent to the email (or printed to console if Gmail not configured)
-6. Enter the code and click "Verify & Create Account"
-7. You will be redirected to the Dashboard
+5. The account is created instantly and you are logged in. **No OTP is required at registration** — the email is verified the first time you log in.
 
 ### Test 2: Login (with OTP)
 1. Log out if logged in
@@ -225,7 +216,7 @@ The frontend will be available at `http://localhost:3000` (or the port shown).
 3. The goal status changes to "completed"
 
 ### Test 8: Admin Panel
-1. Log in with the admin account (default `admin@savegoal.com` / `admin12345`)
+1. Log in with the admin account (see `backend/.env`: `ADMIN_EMAIL` / `ADMIN_PASSWORD`)
 2. You will be taken to the Admin Panel (or click "Admin" in the nav)
 3. View platform stats (users, goals, transactions) and manage/delete users
 
@@ -242,11 +233,12 @@ The frontend will be available at `http://localhost:3000` (or the port shown).
 ### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/register` | Step 1: validate details and send registration OTP |
-| POST | `/api/auth/verify-register` | Step 2: verify OTP and create account |
-| POST | `/api/auth/login` | Step 1: validate credentials and send login OTP |
-| POST | `/api/auth/verify-login` | Step 2: verify OTP and issue JWT |
-| POST | `/api/auth/resend-otp` | Resend a verification code |
+| POST | `/api/auth/register` | Create account and issue JWT |
+| POST | `/api/auth/login` | Step 1: validate credentials; returns `status:"otp"` and issues a one-time login OTP |
+| POST | `/api/auth/otp/verify` | Step 2: verify login OTP and complete authentication |
+| POST | `/api/auth/otp/send` | Resend a login/recovery code (cooldown/rate-limited) |
+| POST | `/api/auth/forgot-password` | Step 1: request a password-reset code (OTP emailed) |
+| POST | `/api/auth/reset-password` | Step 2: verify code and set a new password |
 | POST | `/api/auth/logout` | Logout user |
 | GET | `/api/auth/me` | Get current user |
 | PUT | `/api/auth/me` | Update profile/password |
@@ -265,18 +257,26 @@ The frontend will be available at `http://localhost:3000` (or the port shown).
 ### Transactions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/goals/:id/savings` | Add savings (creates pending deposit) |
+| POST | `/api/goals/:id/savings` | Add savings (creates pending deposit, OTP-confirmed) |
 | POST | `/api/goals/:id/savings/:txId/confirm` | Confirm a deposit with OTP |
 | POST | `/api/goals/:id/withdraw` | Withdraw funds (OTP approved) |
-| GET | `/api/goals/:id/transactions` | Get goal transactions |
+| GET | `/api/goals/:id/transactions` | Get goal transactions (search + status filter) |
+| GET | `/api/goals/:id/export` | Export goal transactions as CSV |
+| GET | `/api/goals/export-all` | Export all user transactions as CSV |
 
 ### Admin (admin role required)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/admin/overview` | Platform statistics |
-| GET | `/api/admin/users` | List all users |
+| GET | `/api/admin/users/summary` | List all users with summary stats |
 | GET | `/api/admin/users/:id` | Get a user with their goals |
 | DELETE | `/api/admin/users/:id` | Delete a user and their data |
+| GET | `/api/admin/export` | Export all users as CSV |
+
+### Contact
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/contact` | Submit the contact form (emails the admin) |
 
 ---
 
@@ -288,14 +288,18 @@ SaveGoal/
 │   ├── index.html          # Landing page
 │   ├── login.html          # Login page
 │   ├── register.html       # Registration page
+│   ├── forgot-password.html# Password reset page
 │   ├── dashboard.html      # User dashboard
 │   ├── goal.html           # Goal details page
 │   ├── profile.html        # Profile/settings page
 │   ├── admin.html          # Admin panel
+│   ├── contact.html        # Contact page
+│   ├── terms.html          # Terms of Service
+│   ├── 404.html            # Not found page
 │   ├── css/
 │   │   └── style.css       # All styles
 │   └── js/
-│       ├── utils.js        # Utility functions
+│       ├── utils.js        # Utility functions + nav/theme
 │       ├── auth.js         # Authentication logic
 │       ├── dashboard.js    # Dashboard logic
 │       ├── goal.js         # Goal details logic
@@ -315,7 +319,8 @@ SaveGoal/
 │   │   ├── auth.js         # Auth routes
 │   │   ├── goals.js        # Goal routes
 │   │   ├── transactions.js # Transaction routes
-│   │   └── admin.js        # Admin routes
+│   │   ├── admin.js        # Admin routes
+│   │   └── contact.js      # Contact form route
 │   ├── middleware/
 │   │   ├── auth.js         # JWT authentication middleware
 │   │   ├── admin.js        # Admin role middleware
@@ -323,7 +328,8 @@ SaveGoal/
 │   └── utils/
 │       ├── mailer.js       # Nodemailer Gmail config
 │       ├── otp.js          # OTP generation/verification
-│       └── goalHelper.js   # Goal amount recomputation
+│       ├── goalHelper.js   # Goal amount recomputation
+│       └── reminders.js    # Weekly savings reminder emails
 │
 └── README.md
 ```
@@ -333,15 +339,17 @@ SaveGoal/
 ## Security Features
 
 - Passwords hashed with bcrypt (12 rounds)
-- **Email OTP verification** for registration, login, deposits, and withdrawals
+- **Email OTP verification** for login, deposits, and withdrawals (codes stored as HMAC hashes, single-use, 5-minute expiry, attempt limit)
 - JWT-based authentication for all protected routes
 - Users can only access their own data (data isolation)
 - Input validation on all API endpoints
-- Rate limiting on all API routes and stricter limits on auth endpoints
+- Rate limiting on all API routes and stricter limits on auth/OTP/contact endpoints
 - CORS restricted to configured origins
 - Environment variables for sensitive configuration (no hardcoded secrets)
 - Automatic OTP expiry and attempts limit (prevents brute force)
-- Admin role middleware protects admin-only routes
+- Admin role middleware protects admin-only routes; admin accounts cannot be deleted
+- Security headers (helmet), MongoDB query-injection sanitization, HTTPS enforcement + trust proxy in production
+- Deposit amounts capped so users cannot overshoot their goal target
 
 ---
 
@@ -355,12 +363,8 @@ All amounts are displayed in **NPR (Nepalese Rupees)** format throughout the app
 
 - Payment gateway integration
 - Bank account linking
-- Savings analytics and charts (visuals)
-- Email notifications for milestones
-- Savings streaks and rewards
+- Additional analytics (visuals)
 - Mobile app version
-- Export data to CSV/PDF
-- Password reset via email
 
 ---
 

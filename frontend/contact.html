@@ -60,7 +60,7 @@
         <div class="card" style="text-align:center;">
           <div style="font-size:2rem;margin-bottom:12px;">📧</div>
           <h4>Email</h4>
-          <p style="font-size:0.9rem;">prathambikamshah10@gmail.com</p>
+          <p style="font-size:0.9rem;">prathambikramshah10@gmail.com</p>
         </div>
         <div class="card" style="text-align:center;">
           <div style="font-size:2rem;margin-bottom:12px;">🌍</div>
@@ -77,15 +77,32 @@
   </div>
   <script src="js/utils.js"></script>
   <script>
-    document.getElementById('contactForm').addEventListener('submit', function(e) {
+    document.getElementById('contactForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = this.querySelector('button[type="submit"]');
+      const name = document.getElementById('contactName').value.trim();
+      const email = document.getElementById('contactEmail').value.trim();
+      const subject = document.getElementById('contactSubject').value;
+      const message = document.getElementById('contactMessage').value.trim();
+
       btn.disabled = true;
       btn.textContent = 'Sending...';
-      setTimeout(() => {
+
+      try {
+        const res = await fetch(API_BASE + '/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not send message');
         this.style.display = 'none';
         document.getElementById('contactSuccess').style.display = 'block';
-      }, 1500);
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Send Message';
+      }
     });
   </script>
 </body>

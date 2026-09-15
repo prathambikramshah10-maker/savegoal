@@ -49,15 +49,24 @@
         <form id="passwordForm">
           <div class="form-group">
             <label class="form-label" for="currentPassword">Current Password</label>
-            <input type="password" id="currentPassword" class="form-input" required autocomplete="current-password">
+            <div class="password-wrap">
+              <input type="password" id="currentPassword" class="form-input" required autocomplete="current-password">
+              <button type="button" class="toggle-pw" onclick="togglePassword('currentPassword', this)" aria-label="Show or hide password" tabindex="-1">👁</button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="newPassword">New Password</label>
-            <input type="password" id="newPassword" class="form-input" placeholder="At least 6 characters" required autocomplete="new-password">
+            <div class="password-wrap">
+              <input type="password" id="newPassword" class="form-input" placeholder="At least 6 characters" required autocomplete="new-password">
+              <button type="button" class="toggle-pw" onclick="togglePassword('newPassword', this)" aria-label="Show or hide password" tabindex="-1">👁</button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="confirmNewPassword">Confirm New Password</label>
-            <input type="password" id="confirmNewPassword" class="form-input" required autocomplete="new-password">
+            <div class="password-wrap">
+              <input type="password" id="confirmNewPassword" class="form-input" required autocomplete="new-password">
+              <button type="button" class="toggle-pw" onclick="togglePassword('confirmNewPassword', this)" aria-label="Show or hide password" tabindex="-1">👁</button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
         </form>
