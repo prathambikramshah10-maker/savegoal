@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { registerSchema, loginSchema } = require('../middleware/validation');
 const rateLimit = require('express-rate-limit');
 const { createAndSendOtp, verifyOtp } = require('../utils/otp');
+const { isConfigured } = require('../utils/mailer');
 
 const router = express.Router();
 
@@ -205,6 +206,18 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
       recordFailedLogin(email);
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // If email sending isn't configured, sign the user in directly so login
+    // still works. The two-step OTP flow kicks in once Gmail is configured.
+    if (!isConfigured()) {
+      const token = generateToken(user._id, user.role);
+      return res.json({
+        message: 'Signed in successfully.',
+        token,
+        user: publicUser(user),
+        role: user.role
+      });
     }
 
     let result;

@@ -44,6 +44,15 @@ function initLoginForm(form) {
 
     try {
       const data = await api.post('/auth/login', { email, password });
+
+      if (data.token) {
+        setAuth(data.token, data.user);
+        stopOtpCountdown();
+        showToast(data.message || 'Signed in successfully!', 'success');
+        window.location.href = data.user.role === 'admin' ? 'admin.html' : 'dashboard.html';
+        return;
+      }
+
       loginEmail = email;
       document.getElementById('otpStep2').style.display = 'block';
       form.style.display = 'none';
