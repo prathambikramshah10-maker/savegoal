@@ -58,6 +58,7 @@ async function loadDashboard() {
     ]);
 
     updateStats(statsRes.stats, statsRes.recentTransactions);
+    renderHero(statsRes.stats, streakRes);
     currentGoals = goalsRes.goals;
     renderGoals(currentGoals);
     renderStreak(streakRes);
@@ -67,6 +68,24 @@ async function loadDashboard() {
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function renderHero(stats, streak) {
+  const amount = document.getElementById('heroTotalSaved');
+  const overall = document.getElementById('heroOverall');
+  const streakEl = document.getElementById('heroStreak');
+  const sub = document.getElementById('heroBalanceSub');
+  if (!amount || !overall || !streakEl || !sub) return;
+
+  const goals = stats.activeGoals || 0;
+  amount.textContent = formatNPR(stats.totalSaved);
+  overall.textContent = stats.overallPercentage + '%';
+  streakEl.textContent = streak && streak.streak
+    ? streak.streak === 1 ? '1 day' : streak.streak + ' days'
+    : '0';
+  sub.textContent = goals === 0
+    ? 'Create a goal to start climbing toward your summit.'
+    : `Across ${goals} active ${goals === 1 ? 'goal' : 'goals'}`;
 }
 
 function renderStreak(streak) {

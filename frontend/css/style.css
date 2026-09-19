@@ -2544,3 +2544,102 @@ body.has-sidebar .page-content {
   .dash-title h1 { font-size: 1.5rem; }
   .stats-grid { gap: 10px; }
 }
+
+/* ============================================================
+   Mountain Summit Hero
+   ============================================================ */
+.hero-balance {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(212, 175, 106, 0.24);
+  padding: 0;
+  margin-bottom: 28px;
+  background: var(--bg-card);
+  min-height: 230px;
+}
+
+.hero-balance-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-balance-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 26px 28px 32px;
+}
+
+.hero-balance-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(245, 241, 232, 0.66);
+}
+
+.hero-balance-amount {
+  font-size: 2.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  color: #FDF9F0;
+  margin: 8px 0 8px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hero-balance-sub {
+  font-size: 0.84rem;
+  color: rgba(245, 241, 232, 0.78);
+}
+
+.hero-balance-right {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.hero-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hero-metric label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(245, 241, 232, 0.6);
+}
+
+.hero-metric strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #FDF9F0;
+}
+
+.hero-balance .btn-primary {
+  margin-left: 4px;
+}
+
+@media (max-width: 720px) {
+  .hero-balance-content { padding: 20px 20px 26px; }
+  .hero-balance-amount { font-size: 2.2rem; }
+  .hero-balance-right { gap: 18px; }
+  .hero-metric strong { font-size: 1.1rem; }
+}
+
+@media (max-width: 440px) {
+  .hero-balance { min-height: 0; }
+  .hero-balance-right { justify-content: space-between; width: 100%; }
+  .hero-balance-amount { font-size: 2rem; }
+}
