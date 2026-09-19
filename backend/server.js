@@ -12,6 +12,7 @@ const goalRoutes = require('./routes/goals');
 const transactionRoutes = require('./routes/transactions');
 const adminRoutes = require('./routes/admin');
 const contactRoutes = require('./routes/contact');
+const paymentRoutes = require('./routes/payments');
 const { runSavingsReminders } = require('./utils/reminders');
 
 const app = express();
@@ -100,6 +101,7 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/goals', transactionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
