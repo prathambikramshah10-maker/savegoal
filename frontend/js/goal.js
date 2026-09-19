@@ -7,6 +7,7 @@ let pendingTransactionId = null;
 let pendingSavingsTxId = null;
 let pendingWithdrawAmount = null;
 let otpCountdownTimer = null;
+let availableGateways = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
@@ -24,7 +25,36 @@ document.addEventListener('DOMContentLoaded', () => {
   initEditGoalForm(goalId);
   initWithdrawForm(goalId);
   initConfirmSavings();
+  initGatewayPicker();
 });
+
+function initGatewayPicker() {
+  const wrap = document.getElementById('gatewayPickerWrap');
+  const select = document.getElementById('savingsGateway');
+  if (!wrap || !select) return;
+  api.get('/payments/gateways')
+    .then((res) => {
+      availableGateways = (res.gateways || []).filter((g) => g.key === 'khalti' || g.key === 'esewa');
+      if (!availableGateways.length) return;
+      select.insertAdjacentHTML('beforeend', availableGateways
+        .map((g) => `<option value="${g.key}">${escapeHtml(g.label)}</option>`).join(''));
+      wrap.style.display = '';
+      select.addEventListener('change', onGatewayChange);
+    })
+    .catch(() => { /* gateways unavailable — manual flow only */ });
+}
+
+function onGatewayChange() {
+  const select = document.getElementById('savingsGateway');
+  const btn = document.getElementById('addSavingsBtn');
+  const otpGroup = document.getElementById('otpGroup');
+  const gw = select ? select.value : '';
+  if (otpGroup) otpGroup.style.display = gw ? 'none' : '';
+  if (btn) {
+    const gwInfo = availableGateways.find((g) => g.key === gw);
+    btn.textContent = gw && gwInfo ? `Pay with ${gwInfo.label}` : 'Add & Confirm Savings';
+  }
+}
 
 async function loadGoal(goalId) {
   try {
@@ -265,6 +295,12 @@ function openAddSavingsModal() {
   document.getElementById('savingsAmount').value = '';
   document.getElementById('savingsNote').value = '';
   document.getElementById('savingsConfirmCode').value = '';
+  const gatewaySelect = document.getElementById('savingsGateway');
+  if (gatewaySelect) gatewaySelect.value = '';
+  const otpGroup = document.getElementById('otpGroup');
+  if (otpGroup) otpGroup.style.display = '';
+  const btn = document.getElementById('addSavingsBtn');
+  if (btn) btn.textContent = 'Add & Confirm Savings';
 
   openModal('addSavingsModal');
 }
@@ -279,6 +315,7 @@ function initAddSavingsForm(goalId) {
     const amount = parseFloat(document.getElementById('savingsAmount').value);
     const note = document.getElementById('savingsNote').value.trim();
     const otp = document.getElementById('savingsConfirmCode').value.trim();
+    const gateway = (document.getElementById('savingsGateway')?.value) || '';
     const btn = document.getElementById('addSavingsBtn');
 
     if (!amount || amount <= 0) {
@@ -291,6 +328,12 @@ function initAddSavingsForm(goalId) {
       showToast(`Amount cannot exceed remaining ${formatNPR(remaining)}`, 'error');
       return;
     }
+
+    if (gateway) {
+      await submitGatewayDeposit(goalId, amount, note, gateway, btn);
+      return;
+    }
+
     if (!/^\d{6}$/.test(otp)) {
       showToast('Tap "Send Code", then enter the 6-digit code from your email', 'error');
       return;
@@ -322,6 +365,61 @@ function initAddSavingsForm(goalId) {
       btn.textContent = 'Add & Confirm Savings';
     }
   });
+}
+
+/* Start an online deposit through Khalti / eSewa. The gateway redirect
+   happens on this tab; the pending order id is stashed in sessionStorage so
+   pay-return.html can re-verify server-side after the payer comes back. */
+async function submitGatewayDeposit(goalId, amount, note, gateway, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Redirecting to payment...';
+  const gwInfo = availableGateways.find((g) => g.key === gateway);
+  const label = gwInfo ? gwInfo.label : gateway;
+
+  try {
+    const returnUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pay-return.html');
+    const res = await api.post('/payments/initiate', {
+      goalId,
+      gateway,
+      amountNpr: amount,
+      note: note || `Gateway ${label} deposit`,
+      returnUrl
+    });
+
+    sessionStorage.setItem('savegoal_payorder', JSON.stringify({
+      goalId,
+      orderId: res.orderId,
+      amount
+    }));
+
+    const redirect = res.redirect || {};
+    const url = redirect.url;
+    if (url && redirect.method === 'GET') {
+      window.location.href = url;
+      return;
+    }
+    if (url && redirect.method === 'POST' && redirect.body) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+      form.style.display = 'none';
+      Object.entries(redirect.body).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      return;
+    }
+    window.location.href = returnUrl;
+  } catch (err) {
+    showToast(err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = `Pay with ${label}`;
+  }
 }
 
 async function handleSendSavingsCode() {

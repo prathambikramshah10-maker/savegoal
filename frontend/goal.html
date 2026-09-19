@@ -52,7 +52,14 @@
           <label class="form-label" for="savingsNote">Note (optional)</label>
           <input type="text" id="savingsNote" class="form-input" placeholder="e.g. Monthly savings">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="gatewayPickerWrap" style="display:none;">
+          <label class="form-label" for="savingsGateway">Pay With</label>
+          <select id="savingsGateway" class="form-select">
+            <option value="">Bank transfer / Manual</option>
+          </select>
+          <div class="form-hint" id="savingsGatewayHint">Choose an online payment option, or add savings manually with a code.</div>
+        </div>
+        <div class="form-group" id="otpGroup">
           <label class="form-label" for="savingsConfirmCode">Confirmation Code (OTP)</label>
           <div style="display:flex;gap:10px;">
             <input type="text" id="savingsConfirmCode" class="form-input" placeholder="6-digit code" inputmode="numeric" maxlength="6" style="letter-spacing:4px;font-weight:700;">

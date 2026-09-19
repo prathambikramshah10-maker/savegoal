@@ -97,7 +97,8 @@ async function initiate({ amountNpr, orderId, orderName, customer, returnUrl, we
      HTML with a form action. Prefer the explicit payment URL when present. */
   let paymentUrl =
     data.paymentUrl || data.payment_url || data.PaymentUrl ||
-    data.response?.payment_url || data.response?.paymentUrl || null;
+    data.response?.payment_url || data.response?.paymentUrl ||
+    data.data?.url || data.data?.payment_url || data.data?.paymentUrl || null;
 
   if (!paymentUrl && initRes.headers.get('location')) {
     paymentUrl = initRes.headers.get('location');

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <title>Verifying Payment - SaveGoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="nav" id="mainNav"></nav>
+
+  <div class="page-content">
+    <div class="container">
+      <div class="card" style="max-width:460px;margin:48px auto;padding:40px;text-align:center;">
+        <div style="font-size:2.4rem;margin-bottom:12px;" id="payIcon">⏳</div>
+        <h1 style="font-size:1.3rem;margin-bottom:8px;" id="payTitle">Verifying your payment...</h1>
+        <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.7;" id="payStatus">
+          We're confirming your transaction with the payment gateway.
+        </p>
+        <div class="loading-overlay" style="padding:24px 0;" id="paySpinner">
+          <div class="spinner spinner-lg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/pay-return.js"></script>
+</body>
+</html>
