@@ -404,6 +404,50 @@ async function submitQuickDeposit() {
   }
 }
 
+function openDepositPicker() {
+  if (!currentGoals.length) {
+    showToast('Create a goal first, then deposit into it.', 'info');
+    openCreateGoalModal();
+    return;
+  }
+
+  const active = currentGoals.filter(g => g.status === 'active');
+  const list = document.getElementById('depositPickerList');
+  const empty = document.getElementById('depositPickerEmpty');
+
+  if (active.length) {
+    list.innerHTML = active.map(g => {
+      const pct = g.targetAmount > 0
+        ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100))
+        : 0;
+      const name = escapeHtml(g.name).replace(/'/g, "\\'");
+      return `
+        <button class="deposit-picker-item" onclick="openQuickDeposit('${g._id}','${name}',${g.currentAmount},${g.targetAmount});closeModal('depositPickerModal')">
+          <span class="deposit-picker-icon ${getCategoryClass(g.category)}">${getCategoryIcon(g.category)}</span>
+          <span class="deposit-picker-info">
+            <span class="deposit-picker-name">${escapeHtml(g.name)}</span>
+            <span class="deposit-picker-amount">${formatNPR(g.currentAmount)} of ${formatNPR(g.targetAmount)} · ${pct}%</span>
+          </span>
+          <span class="deposit-picker-action">+ Deposit</span>
+        </button>
+      `;
+    }).join('');
+    list.style.display = 'flex';
+    if (empty) empty.style.display = 'none';
+  } else {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+  }
+
+  openModal('depositPickerModal');
+}
+
+function scrollToGoals() {
+  const el = document.getElementById('goalsContainer');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function initCreateGoalForm() {
   const form = document.getElementById('createGoalForm');
   if (!form) return;

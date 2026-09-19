@@ -16,18 +16,16 @@
   <nav class="nav" id="mainNav"></nav>
 
   <div class="page-content">
-    <div class="container">
+    <div class="container" style="max-width:1280px;">
       <!-- Dashboard Header -->
-      <div class="dashboard-header">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
-          <div>
-            <h1 id="greeting">Loading...</h1>
-            <p id="todayLine">Here's an overview of your savings progress</p>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="exportAllCSV()">📥 Export CSV</button>
-            <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
-          </div>
+      <div class="dash-header">
+        <div class="dash-title">
+          <h1 id="greeting">Loading...</h1>
+          <p id="todayLine">Here's an overview of your savings progress</p>
+        </div>
+        <div class="dash-actions">
+          <button class="btn btn-secondary btn-sm" onclick="exportAllCSV()">📥 Export CSV</button>
+          <button class="btn btn-primary" onclick="openCreateGoalModal()">+ New Goal</button>
         </div>
       </div>
 
@@ -56,82 +54,129 @@
       </div>
 
       <!-- At-risk alerts -->
-      <div id="atRiskBanner"></div>
+      <div id="atRiskBanner" style="margin-bottom:28px;"></div>
 
-      <!-- Savings Streak -->
-      <div class="card" style="margin-bottom:32px;" id="streakCard">
-        <div class="section-header" style="margin-bottom:16px;">
-          <h2 class="section-title" style="font-size:1.1rem;">🔥 Savings Streak</h2>
-        </div>
-        <div id="streakContainer">
-          <div class="loading-overlay" style="padding:20px;">
-            <div class="spinner"></div>
-          </div>
-        </div>
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="quick-action" onclick="openDepositPicker()">
+          <span class="quick-action-icon gold">💸</span>
+          <span class="quick-action-label">Make a Deposit</span>
+          <span class="quick-action-hint">Add money to a savings goal</span>
+        </button>
+        <button class="quick-action" onclick="openCreateGoalModal()">
+          <span class="quick-action-icon">🎯</span>
+          <span class="quick-action-label">New Goal</span>
+          <span class="quick-action-hint">Start saving for something new</span>
+        </button>
+        <button class="quick-action" onclick="exportAllCSV()">
+          <span class="quick-action-icon">📥</span>
+          <span class="quick-action-label">Export CSV</span>
+          <span class="quick-action-hint">Download your transactions</span>
+        </button>
+        <button class="quick-action" onclick="scrollToGoals()">
+          <span class="quick-action-icon">📊</span>
+          <span class="quick-action-label">View Goals</span>
+          <span class="quick-action-hint">Review progress on every goal</span>
+        </button>
       </div>
 
-      <!-- Overall Progress -->
-      <div class="card" style="margin-bottom:32px;" id="overallProgressCard">
-        <div id="overallProgressBody">
-          <div class="progress-label">
-            <span style="font-weight:600;">Overall Savings Progress</span>
-            <span id="overallPercentage" style="font-weight:700;color:var(--primary);">0%</span>
+      <!-- Main grid -->
+      <div class="dash-grid">
+        <div class="dash-main">
+          <!-- Overall Progress -->
+          <div class="card" id="overallProgressCard">
+            <div id="overallProgressBody">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <span class="panel-icon">📈</span>
+                  Overall Savings Progress
+                </div>
+                <span id="overallPercentage" style="font-weight:700;color:var(--primary);">0%</span>
+              </div>
+              <div class="progress-bar progress-bar-lg">
+                <div class="progress-fill" id="overallBar" style="width:0%"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:0.82rem;color:var(--text-muted);">
+                <span id="overallSavedLabel">NPR 0 saved</span>
+                <span id="overallTargetLabel">Target: NPR 0</span>
+              </div>
+            </div>
+            <div id="overallEmpty" style="display:none;text-align:center;padding:8px 0;">
+              <div style="font-size:1.6rem;margin-bottom:8px;opacity:0.5;">🎯</div>
+              <p style="max-width:360px;margin:0 auto 16px;font-size:0.95rem;">Create a savings goal to start tracking your overall progress.</p>
+              <button class="btn btn-primary btn-sm" onclick="openCreateGoalModal()">+ Create Your First Goal</button>
+            </div>
           </div>
-          <div class="progress-bar progress-bar-lg">
-            <div class="progress-fill" id="overallBar" style="width:0%"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:var(--text-muted);">
-            <span id="overallSavedLabel">NPR 0 saved</span>
-            <span id="overallTargetLabel">Target: NPR 0</span>
-          </div>
-        </div>
-        <div id="overallEmpty" style="display:none;text-align:center;padding:8px 0;">
-          <div style="font-size:1.6rem;margin-bottom:8px;opacity:0.5;">🎯</div>
-          <p style="max-width:360px;margin:0 auto 16px;font-size:0.95rem;">Create a savings goal to start tracking your overall progress.</p>
-          <button class="btn btn-primary btn-sm" onclick="openCreateGoalModal()">+ Create Your First Goal</button>
-        </div>
-      </div>
 
-      <!-- Monthly Savings Chart -->
-      <div class="card" style="margin-bottom:32px;" id="monthlyChartCard">
-        <div class="section-header" style="margin-bottom:16px;">
-          <h2 class="section-title" style="font-size:1.1rem;">📊 Savings in the Last 6 Months</h2>
-        </div>
-        <div id="monthlyChart" style="min-height:40px;">
-          <div class="loading-overlay" style="padding:16px;">
-            <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+          <!-- Monthly Savings Chart -->
+          <div class="card" id="monthlyChartCard">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">📊</span>
+                Savings in the Last 6 Months
+              </div>
+            </div>
+            <div id="monthlyChart" style="min-height:40px;">
+              <div class="loading-overlay" style="padding:16px;">
+                <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Recent Activity -->
-      <div class="card" style="margin-bottom:32px;" id="recentActivityCard">
-        <div class="section-header" style="margin-bottom:16px;">
-          <h2 class="section-title" style="font-size:1.1rem;">🕑 Recent Activity</h2>
-        </div>
-        <div id="recentActivityContainer">
-          <div class="loading-overlay" style="padding:16px;">
-            <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+          <!-- Goals Section -->
+          <div>
+            <div class="section-header">
+              <h2 class="section-title">Savings Goals</h2>
+            </div>
+            <div id="goalsContainer">
+              <div class="loading-overlay">
+                <div class="spinner spinner-lg"></div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Savings Tip -->
-      <div class="card" style="margin-bottom:32px;" id="savingsTipCard">
-        <div class="section-header" style="margin-bottom:12px;">
-          <h2 class="section-title" style="font-size:1.1rem;">💡 Savings Tip</h2>
-        </div>
-        <p id="savingsTip" style="font-size:0.95rem;line-height:1.7;color:var(--text-secondary);">Loading tip...</p>
-      </div>
+        <div class="dash-side">
+          <!-- Savings Streak -->
+          <div class="card" id="streakCard">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">🔥</span>
+                Savings Streak
+              </div>
+            </div>
+            <div id="streakContainer">
+              <div class="loading-overlay" style="padding:20px;">
+                <div class="spinner"></div>
+              </div>
+            </div>
+          </div>
 
-      <!-- Goals Section -->
-      <div class="section-header">
-        <h2 class="section-title">Savings Goals</h2>
-      </div>
+          <!-- Recent Activity -->
+          <div class="card" id="recentActivityCard">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">🕑</span>
+                Recent Activity
+              </div>
+            </div>
+            <div id="recentActivityContainer">
+              <div class="loading-overlay" style="padding:16px;">
+                <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+              </div>
+            </div>
+          </div>
 
-      <div id="goalsContainer">
-        <div class="loading-overlay">
-          <div class="spinner spinner-lg"></div>
+          <!-- Savings Tip -->
+          <div class="card" id="savingsTipCard">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">💡</span>
+                Savings Tip
+              </div>
+            </div>
+            <p id="savingsTip" style="font-size:0.92rem;line-height:1.7;color:var(--text-secondary);">Loading tip...</p>
+          </div>
         </div>
       </div>
     </div>
@@ -187,27 +232,6 @@
     </div>
   </div>
 
-  <!-- Mobile Bottom Nav -->
-  <nav class="bottom-nav">
-    <a href="dashboard.html" class="bottom-nav-item active">
-      <span class="bottom-nav-icon">🏠</span>
-      <span>Home</span>
-    </a>
-    <a href="dashboard.html" class="bottom-nav-item" onclick="event.preventDefault();document.getElementById('goalsContainer').scrollIntoView({behavior:'smooth'});">
-      <span class="bottom-nav-icon">📊</span>
-      <span>Goals</span>
-    </a>
-    <button class="bottom-nav-add" onclick="openCreateGoalModal()" title="New Goal">+</button>
-    <a href="#" class="bottom-nav-item" onclick="event.preventDefault();window.scrollTo({top:0,behavior:'smooth'});">
-      <span class="bottom-nav-icon">📈</span>
-      <span>Stats</span>
-    </a>
-    <a href="profile.html" class="bottom-nav-item">
-      <span class="bottom-nav-icon">👤</span>
-      <span>Profile</span>
-    </a>
-  </nav>
-
   <!-- Quick Deposit Modal -->
   <div class="modal-overlay" id="quickDepositModal">
     <div class="modal" style="max-width:400px;">
@@ -230,6 +254,26 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('quickDepositModal')">Cancel</button>
         <button class="btn btn-primary" id="quickDepositBtn" onclick="submitQuickDeposit()">Deposit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deposit Goal Picker Modal -->
+  <div class="modal-overlay" id="depositPickerModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Choose a Goal</h3>
+        <button class="modal-close" onclick="closeModal('depositPickerModal')">✕</button>
+      </div>
+      <div id="depositPickerList" class="deposit-picker-list"></div>
+      <div id="depositPickerEmpty" class="empty-state" style="display:none;padding:24px 8px;">
+        <div class="empty-state-icon">🎉</div>
+        <h3>All goals completed!</h3>
+        <p>Create a new goal to keep saving.</p>
+        <button class="btn btn-primary btn-sm" onclick="closeModal('depositPickerModal');openCreateGoalModal()">+ New Goal</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('depositPickerModal')">Cancel</button>
       </div>
     </div>
   </div>
