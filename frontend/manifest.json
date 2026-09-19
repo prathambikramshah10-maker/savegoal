@@ -4,8 +4,8 @@
   "description": "Set goals, track progress, and watch your savings grow. A smart savings tracker for Nepal.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0B0D0F",
-  "theme_color": "#D4AF6A",
+  "background_color": "#030D19",
+  "theme_color": "#5B84B8",
   "orientation": "portrait-primary",
   "icons": [
     {

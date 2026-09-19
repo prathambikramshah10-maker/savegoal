@@ -71,7 +71,7 @@ async function loadAdminUsers() {
                   ${u.completedGoals > 0 ? `<span style="color:#4CAF50;"> · ${u.completedGoals} done</span>` : ''}
                 </td>
                 <td style="padding:12px;text-align:center;">
-                  <span style="background:${u.role === 'admin' ? 'rgba(212,175,106,0.1)' : 'rgba(63,167,108,0.1)'};color:${u.role === 'admin' ? 'var(--champagne)' : '#3FA76C'};padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">${u.role}</span>
+                  <span style="background:${u.role === 'admin' ? 'rgba(91,131,184,0.1)' : 'rgba(62,166,124,0.1)'};color:${u.role === 'admin' ? 'var(--champagne)' : '#3EA67C'};padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">${u.role}</span>
                 </td>
                 <td style="padding:12px;text-align:right;white-space:nowrap;">
                   <button class="btn btn-sm btn-primary" style="padding:6px 12px;font-size:0.78rem;" onclick="viewUser('${u.id}','${escapeHtml(u.name)}')">View</button>
